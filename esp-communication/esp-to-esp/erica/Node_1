@@ -1,0 +1,33 @@
+#include <BluetoothSerial.h>
+
+BluetoothSerial SerialBT;
+
+String message = "Hello, World!";
+
+void setup() {
+  Serial.begin(115200);
+
+  // Initialize Bluetooth with error handling
+  if (!SerialBT.begin("Node1")) {  // Node 1 Bluetooth name
+    Serial.println("Failed to initialize Bluetooth. Restarting...");
+    while (true);  // Halt execution for debugging
+  }
+
+  Serial.println("Node 1 is ready and waiting for Node 2.");
+}
+
+void loop() {
+  // Attempt to connect to Node 2
+  if (SerialBT.connected()) {
+    Serial.println("Connected to Node 2. Sending message...");
+
+    // Send the message with a newline delimiter
+    SerialBT.println(message + "\n");
+
+    Serial.println("Message sent. Waiting for acknowledgment...");
+    delay(5000);  // Wait before retrying
+  } else {
+    Serial.println("Node 2 not connected. Retrying in 5 seconds...");
+    delay(5000);
+  }
+}
