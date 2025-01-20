@@ -1,0 +1,52 @@
+#include <BluetoothSerial.h>
+
+BluetoothSerial SerialBT;
+
+void setup() {
+  Serial.begin(115200);
+
+  // Initialize Bluetooth with error handling
+  if (!SerialBT.begin("Node2")) {  // Node 2 Bluetooth name
+    Serial.println("Failed to initialize Bluetooth. Restarting...");
+    while (true);  // Halt execution to debug
+  }
+  Serial.println("Node 2 is ready and waiting for Node 1.");
+}
+
+void loop() {
+  // Check if data is available from Node 1
+  if (SerialBT.available()) {
+    String message = "";
+    while (SerialBT.available()) {
+      char c = (char)SerialBT.read();
+      if (c == '\n') {  // End of message
+        break;
+      }
+      message += c;
+    }
+
+    Serial.print("Received message from Node 1: ");
+    Serial.println(message);
+
+    // Forward message to Node 3
+    Serial.println("Forwarding message to Node 3...");
+    if (forwardToNode3(message)) {
+      Serial.println("Message successfully forwarded to Node 3.");
+    } else {
+      Serial.println("Failed to forward message to Node 3.");
+    }
+  }
+}
+
+// Forward the message to Node 3
+bool forwardToNode3(const String& message) {
+  BluetoothSerial SerialBT2;  // Create a new instance for the connection to Node 3
+  if (!SerialBT2.connect("Node3_MAC_Address")) {  // Replace with Node 3's MAC address
+    Serial.println("Unable to connect to Node 3.");
+    return false;
+  }
+
+  SerialBT2.println(message + "\n");  // Send message with a delimiter
+  SerialBT2.end();  // Close the connection to Node 3
+  return true;
+}
