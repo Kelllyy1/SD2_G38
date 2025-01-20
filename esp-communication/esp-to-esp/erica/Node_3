@@ -1,0 +1,25 @@
+#include <BluetoothSerial.h>
+
+BluetoothSerial SerialBT;
+
+void setup() {
+  Serial.begin(115200);
+  SerialBT.begin("Node3"); // Node 3 Bluetooth name
+  Serial.println("Node 3 is ready and waiting for Node 2.");
+}
+
+void loop() {
+  if (SerialBT.available()) {
+    String message = "";
+    while (SerialBT.available()) {
+      char c = (char)SerialBT.read();
+      message += c;
+    }
+    Serial.print("Received message from Node 2: ");
+    Serial.println(message);
+
+    // Forward to Node 4
+    Serial.println("Forwarding message to Node 4...");
+    SerialBT.println(message);
+  }
+}
