@@ -1,0 +1,18 @@
+// Sender ESP32 Code
+void setup() {
+  Serial.begin(115200);     // Debugging
+  Serial2.begin(9600, SERIAL_8N1, 4, 23); // UART2, TX=4, RX=23
+  Serial.println("Sender Initialized");
+}
+
+void loop() {
+  String message = "Sender 2!";
+  Serial.println("Sending message: " + message);
+  // Serial2.write(message); // Send message via UART
+  Serial2.println(message);
+  delay(1000); // Wait for 1 second
+}
+
+
+
+
