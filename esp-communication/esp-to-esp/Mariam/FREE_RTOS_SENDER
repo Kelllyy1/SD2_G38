@@ -1,0 +1,76 @@
+#include <Arduino.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/semphr.h>
+
+// Shared variable for condition (e.g., prioritize Serial communication)
+volatile bool prioritizeSerial1 = true; // Start with Serial prioritized
+
+// Semaphore handles for mutual exclusion (optional for shared resources)
+SemaphoreHandle_t xSerial1Mutex;
+SemaphoreHandle_t xSerial2Mutex;
+
+// Task to handle Serial communication (high priority)
+void handleSerial1(void *parameter) {
+  while (true) {
+    if (prioritizeSerial1) {
+      // Lock the Serial port (optional if only this task uses it)
+      if (xSemaphoreTake(xSerial1Mutex, (TickType_t)10) == pdTRUE) {
+        Serial1.println("Sending from Serial 1");
+        Serial.println("Sending Serial 1 Data");
+        xSemaphoreGive(xSerial1Mutex); // Release the mutex
+      }
+    }
+    vTaskDelay(500 / portTICK_PERIOD_MS); // Delay to simulate task workload
+  }
+}
+
+// Task to handle Serial1 communication (low priority)
+void handleSerial2(void *parameter) {
+  while (true) {
+    if (!prioritizeSerial1) {
+      // Lock the Serial1 port (optional if only this task uses it)
+      if (xSemaphoreTake(xSerial2Mutex, (TickType_t)10) == pdTRUE) {
+        Serial2.println("Sending from Serial 2");
+        Serial.println("Sending Serial 2 Data");
+        xSemaphoreGive(xSerial2Mutex); // Release the mutex
+      }
+    }
+    vTaskDelay(500 / portTICK_PERIOD_MS); // Delay to simulate task workload
+  }
+}
+
+// A dummy task or interrupt to toggle the prioritization condition
+void conditionTask(void *parameter) {
+  while (true) {
+    prioritizeSerial1 = !prioritizeSerial1; // Toggle condition every 5 seconds
+    Serial.println(prioritizeSerial1 ? "Prioritizing Serial1" : "Prioritizing Serial2");
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
+  }
+}
+
+void setup() {
+  // Initialize Serial ports
+  Serial.begin(115200);  // Primary Serial
+  Serial1.begin(9600, SERIAL_8N1, 17, 16);
+  Serial2.begin(9600, SERIAL_8N1, 23, 4);
+  delay(1000);
+
+  // Create mutexes
+  xSerial1Mutex = xSemaphoreCreateMutex();
+  xSerial2Mutex = xSemaphoreCreateMutex();
+
+  if (xSerial1Mutex == NULL || xSerial2Mutex == NULL) {
+    Serial.println("Failed to create mutex!");
+    while (true);
+  }
+
+  // Create tasks with different priorities
+  xTaskCreatePinnedToCore(handleSerial1, "Serial1 Handler", 1000, NULL, 2, NULL, 1);  // Core 1, higher priority
+  xTaskCreatePinnedToCore(handleSerial2, "Serial2 Handler", 1000, NULL, 1, NULL, 1);  // Core 1, lower priority
+  xTaskCreatePinnedToCore(conditionTask, "Condition Task", 1000, NULL, 1, NULL, 0);   // Core 0
+}
+
+void loop() {
+  // FreeRTOS tasks manage execution; nothing to do here
+}
