@@ -1,0 +1,169 @@
+#include <Arduino.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/semphr.h>
+
+// Shared variables
+volatile bool prioritizeSerial1 = true; // Start with Serial1 prioritized
+String serial1Message = "";
+String serial2Message = "";
+bool serial1DataReady = false;
+bool serial2DataReady = false;
+
+// Semaphore for synchronization
+SemaphoreHandle_t xDisplaySemaphore;
+
+// Task to handle priority determination (Core 0)
+void taskPriorityHandler(void *parameter) {
+  while (true) {
+    prioritizeSerial1 = !prioritizeSerial1; // Toggle priority every 5 seconds
+    Serial.println(prioritizeSerial1 ? "Prioritizing Serial1" : "Prioritizing Serial2");
+    xSemaphoreGive(xDisplaySemaphore); // Signal display task for priority change
+    vTaskDelay(2500 / portTICK_PERIOD_MS); // Delay for priority switching
+  }
+}
+
+// Task to handle receiving messages from Serial1 (Core 0)
+void taskSerial1Receiver(void *parameter) {
+  while (true) {
+    if (Serial1.available() > 0 && prioritizeSerial1) {
+      char c = Serial1.read();
+      if (c != '\n') {
+        serial1Message += c;
+      } else {
+        serial1DataReady = true; // Mark that data is ready
+        xSemaphoreGive(xDisplaySemaphore); // Signal display task
+      }
+    }
+    vTaskDelay(10 / portTICK_PERIOD_MS); // Small delay for task switching
+  }
+}
+
+// Task to handle receiving messages from Serial2 (Core 0)
+void taskSerial2Receiver(void *parameter) {
+  while (true) {
+    if (Serial2.available() > 0 && !prioritizeSerial1) {
+      char c = Serial2.read();
+      if (c != '\n') {
+        serial2Message += c;
+      } else {
+        serial2DataReady = true; // Mark that data is ready
+        xSemaphoreGive(xDisplaySemaphore); // Signal display task
+      }
+    }
+    vTaskDelay(10 / portTICK_PERIOD_MS); // Small delay for task switching
+  }
+}
+
+// Task to handle displaying the prioritized Serial data (Core 1)
+void taskDisplayHandler(void *parameter) {
+  while (true) {
+    // Wait until signaled by the priority or receiver tasks
+    if (xSemaphoreTake(xDisplaySemaphore, portMAX_DELAY) == pdTRUE) {
+      if (prioritizeSerial1) {
+        if (serial1DataReady && !serial1Message.isEmpty()) {
+          Serial.println("Serial1 Message Received");
+          Serial.print("Displaying Serial1: ");
+          Serial.println(serial1Message);
+          serial1Message = ""; // Clear message after display
+          serial1DataReady = false;
+        } else {
+          Serial.println("Serial1 did not send information.");
+        }
+      } else {
+        if (serial2DataReady && !serial2Message.isEmpty()) {
+          Serial.println("Serial2 Message Received");
+          Serial.print("Displaying Serial2: ");
+          Serial.println(serial2Message);
+          serial2Message = ""; // Clear message after display
+          serial2DataReady = false;
+        } else {
+          Serial.println("Serial2 did not send information.");
+        }
+      }
+    }
+    vTaskDelay(10 / portTICK_PERIOD_MS); // Ensure task responsiveness
+  }
+}
+
+void setup() {
+  // Initialize Serial ports
+  Serial.begin(115200);          // Debugging (USB Serial)
+  Serial1.begin(9600, SERIAL_8N1, 17, 16); // UART2: TX=17, RX=16
+  Serial2.begin(9600, SERIAL_8N1, 23, 4);  // UART1: TX=23, RX=4
+
+  Serial.println("ESP32 Receiver with Priority Management Initialized");
+
+  // Create semaphore
+  xDisplaySemaphore = xSemaphoreCreateBinary();
+  if (xDisplaySemaphore == NULL) {
+    Serial.println("Failed to create semaphore!");
+    while (true); // Halt execution
+  }
+
+  // Create tasks and pin them to specific cores
+  xTaskCreatePinnedToCore(taskPriorityHandler, "Priority Handler", 2000, NULL, 1, NULL, 0); // Core 0
+  xTaskCreatePinnedToCore(taskSerial1Receiver, "Serial1 Receiver", 2000, NULL, 1, NULL, 0); // Core 0
+  xTaskCreatePinnedToCore(taskSerial2Receiver, "Serial2 Receiver", 2000, NULL, 1, NULL, 0); // Core 0
+  xTaskCreatePinnedToCore(taskDisplayHandler, "Display Handler", 2000, NULL, 2, NULL, 1);   // Core 1
+}
+
+void loop() {
+  // FreeRTOS tasks manage execution; nothing to do here
+}
+
+  // FreeRTOS tasks manage execution; nothing to do here
+//}
+
+
+
+// void setup() {
+//   Serial.begin(115200);         // Debugging
+//   Serial1.begin(9600, SERIAL_8N1, 17, 16); // UART2, TX=17, RX=16
+//   Serial2.begin(9600, SERIAL_8N1, 23, 4); // UART1, TX=23, RX=4
+  
+
+//   Serial.println("ESP32 Receiver Initialized");
+// }
+
+// void loop() {
+//   String serial2Message = "";
+//   String serial1Message = "";
+//   // Check for data on Serial2
+//   if (Serial2.available() > 0) {
+//     while (Serial2.available() > 0) {
+//       char c = Serial2.read();
+//       if (c != '\n'){
+
+//         serial2Message = serial2Message + c;
+
+//       }
+
+//       else {
+//       Serial.print("Serial2: ");
+//       Serial.println(serial2Message);
+//       serial2Message ="";
+//       }
+//     }
+//   }
+
+//   // Check for data on Serial1
+//   if (Serial1.available() > 0) {
+//     while (Serial1.available() > 0) {
+//       char c = Serial1.read();
+//       if (c != '\n'){
+
+//         serial1Message = serial1Message + c;
+
+//       }
+
+//       else {
+//       Serial.print("Serial1: ");
+//       Serial.println(serial1Message);
+//       serial1Message ="";
+//       }
+//     }
+//   }
+
+//   delay(100); // Add a small delay to avoid overwhelming the Serial Monitor
+// }
