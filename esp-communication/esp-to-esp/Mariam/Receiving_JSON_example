@@ -1,0 +1,67 @@
+//updates esp_32_x based on which iteration (x=0, x++) each iteration
+
+#include <ArduinoJson.h>
+
+#define TX_PIN 17
+#define RX_PIN 16
+
+int iterationCount = 0;  // Counter for iterations
+
+void setup() {
+    Serial.begin(115200);
+    Serial2.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN);
+    Serial.println("Receiver Started...");
+}
+
+void loop() {
+    if (Serial2.available()) {
+        String receivedData = "";
+
+        while (Serial2.available()) {
+            char c = Serial2.read();
+            receivedData += c;
+            delay(2);
+        }
+
+        Serial.print("Sending: ");
+        Serial.println(receivedData);
+
+        StaticJsonDocument<200> jsonDoc;
+        DeserializationError error = deserializeJson(jsonDoc, receivedData);
+
+        if (error) {
+            Serial.println("JSON parsing failed!");
+            return;
+        }
+
+        // Extract the base name before any modifications
+        String baseName = jsonDoc["name"].as<String>();
+        
+        // Remove any existing "_X" numbering if present
+        int underscoreIndex = baseName.lastIndexOf('_');
+        if (underscoreIndex != -1) {
+            String possibleNumber = baseName.substring(underscoreIndex + 1);
+            if (possibleNumber.toInt() > 0) {  // Check if it's a number
+                baseName = baseName.substring(0, underscoreIndex);
+            }
+        }
+
+        Serial.println(baseName);
+
+        // Increment iteration count
+        iterationCount++;
+        Serial.println(iterationCount);
+
+        // Update name with new count
+        jsonDoc["name"] = baseName + "_" + String(iterationCount);
+
+        // Send updated JSON back
+        String responseString;
+        serializeJson(jsonDoc, responseString);
+        Serial2.println(responseString);  // Send full JSON back
+
+        Serial.println("Sent updated JSON name: " + String(jsonDoc["name"].as<const char*>()));
+    }
+
+    delay(5000);
+}
