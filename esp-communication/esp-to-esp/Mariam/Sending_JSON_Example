@@ -1,0 +1,58 @@
+#include <ArduinoJson.h>
+
+#define TX_PIN 17
+#define RX_PIN 16
+
+String deviceName = "esp32_sender";  // Initial name
+String deviceName_updated;
+
+void setup() {
+    Serial.begin(115200);
+    Serial2.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN);
+}
+
+void loop() {
+    // Create JSON
+    StaticJsonDocument<200> jsonDoc;
+    jsonDoc["name"] = deviceName;
+    jsonDoc["temperature"] = 25.6;
+    jsonDoc["voltage"] = 3.3;
+
+    // Serialize JSON
+    String jsonString;
+    serializeJson(jsonDoc, jsonString);
+    
+    Serial.println("Sending: " + String(jsonDoc["name"].as<const char*>()));
+    Serial2.println(jsonString);  // Send JSON over UART
+
+    delay(5000);
+
+    // Check if a new JSON is received from the receiver
+    if (Serial2.available()) {
+        String receivedData = "";
+        while (Serial2.available()) {
+            char c = Serial2.read();
+            receivedData += c;
+            delay(2);
+        }
+
+        // Serial.println("Received: " + receivedData);
+
+        StaticJsonDocument<200> receivedJson;
+        DeserializationError error = deserializeJson(receivedJson, receivedData);
+
+        if (!error) {
+            if (receivedJson.containsKey("name")) {
+                deviceName_updated = String(receivedJson["name"].as<const char*>());  // Update device name
+                Serial.println("Updated name: " + deviceName_updated);
+            }
+
+            // Print received values
+            // Serial.print("Temperature: "); Serial.println(receivedJson["temperature"].as<float>());
+            // Serial.print("Voltage: "); Serial.println(receivedJson["voltage"].as<float>());
+        } else {
+            Serial.println("JSON parsing failed!");
+        }
+    }
+}
+// sends esp_32 and recieves (from the reciever code example) new name based on which iteration
