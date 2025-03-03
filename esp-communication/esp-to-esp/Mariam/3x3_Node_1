@@ -1,0 +1,158 @@
+#include <ArduinoJson.h>
+
+#define NODE_ID 1  // This node's ID
+#define ACK_TIMEOUT 500  // Timeout for acknowledgment (ms)
+String jsonString_5;
+String jsonString_7;
+bool processing_1;
+bool ping;
+
+// Function to listen for an acknowledgment
+bool waitForAck(HardwareSerial &serialPort)  {
+    unsigned long startTime = millis();
+    
+    while (millis() - startTime < ACK_TIMEOUT) {  // Wait for 500ms for a response
+        serialPort.println("PING");  // Send initial signal
+        Serial.println("Sent: PING");
+
+        String receivedData = "";
+
+        if (serialPort.available()) {
+            while (serialPort.available()) {
+                char c = serialPort.read();
+                receivedData += c;
+            }
+            receivedData.trim();
+
+            if (receivedData == "I am available") {
+                Serial.println("Node responded: " + receivedData);
+                return true;  // Node is available
+                
+            }
+        }
+    }
+
+    Serial.println("Node did not respond in time.");
+    return false; //node is not available
+}
+
+
+// Function to send data and wait for acknowledgment
+// void sendDataWithAck(HardwareSerial &serialPort, String jsonData) {
+//     // while (true) {  // Keep retrying until ACK is received
+//         serialPort.println(jsonData);
+//         Serial.println("Sent: " + jsonData);
+
+//         if (waitForAck(serialPort)) {
+//             Serial.println("Message successfully acknowledged.");
+   
+//         } else {
+//             Serial.println("Retrying...");
+//         }
+//     }
+// }
+
+
+bool processReceivedData(String jsonData) {
+    StaticJsonDocument<200> doc;
+    DeserializationError error = deserializeJson(doc, jsonData);
+
+    if (error) {
+        Serial.println("Failed to parse JSON");
+        return;
+    }
+
+    int deviceID = doc["deviceID"];  
+    int routingPath = deviceID % 3;
+
+    if (routingPath == 1 && (waitForAck(Serial1))) {
+        Serial.println("Routing UP to Node 4");
+        return True;
+    } else (waitForAck(Serial2)){
+        Serial.println("Routing RIGHT to Node 2");
+        return True;
+    }
+    else {
+      Serial.println("No valid connections out of node1, trying again...");
+      return False;
+    }
+}
+
+
+bool listenForPing(HardwareSerial &serialPort) {
+    if (serialPort.available()) {
+        String receivedData = "";
+
+        // Read all available data from the serial port
+        while (serialPort.available()) {
+            char c = serialPort.read();
+            receivedData += c;
+        }
+
+        receivedData.trim();  
+        Serial.println("Received: " + receivedData);
+
+        if (receivedData == "PING") {
+            Serial.println("Ping detected!");
+            return true;
+        }
+    }
+    
+    return false;  // No valid PING received
+}
+
+void setup() {
+    Serial.begin(115200);
+
+    Serial2.begin(9600, SERIAL_8N1, 16, 17);  // Communication with Node 2
+
+    Serial1.begin(9600, SERIAL_8N1, 3, 24);  // Communication with Node 4
+
+
+    StaticJsonDocument<200> localJson;
+    localJson["deviceID"] = 5;  
+    localJson["temperature"] = 25.4;  
+    localJson["voltage"] = 3.7;  
+
+ 
+    serializeJson(localJson, jsonString_5);
+    Serial.println("Generated JSON: " + jsonString_5);
+
+
+    StaticJsonDocument<200> localJson_1;
+    localJson["deviceID"] = 7;  
+    localJson["temperature"] = 25.4; 
+    localJson["voltage"] = 3.7;  
+
+ 
+    serializeJson(localJson_1, jsonString_7);
+    Serial.println("Generated JSON: " + jsonString_7);
+}
+
+String readFromSerial(HardwareSerial &serialPort) {
+    String receivedData = "";
+
+
+    while (serialPort.available()) {
+        char c = serialPort.read();
+        receivedData += c;
+        delay(2);
+    }
+
+    receivedData.trim(); 
+    return receivedData;
+}
+
+void loop() {
+  string json_string_node_2;
+  bool processing_node_2;
+
+    ping = listenForPing(Serial2, 2); 
+    if(ping){
+      json_string_node_2= readFromSerial(Serial2);
+      processing_node_2= processReceivedData(json_string_node_2);     
+    }
+
+    processing_1 = processReceivedData(jsonString_5);
+
+}
