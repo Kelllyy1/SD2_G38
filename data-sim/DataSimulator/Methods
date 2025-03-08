@@ -1,0 +1,156 @@
+import random
+import json
+import math
+import time
+import serial
+
+# Constants
+AIR_DENSITY = 1.225
+MAX_VOLTAGE = 2.7
+FAULT_PROBABILITY = 0.01
+
+class Cell:
+    """Represents a single cell in the hierarchy with attributes for simulation."""
+
+    def __init__(self, block, rack, module, cell_id):
+        self.id = f"B{(block.id):03}-R{(rack.id):03}-M{(module.id):03}-C{(cell_id):03}"
+        self.voltage = 0.0
+        self.current = 0.0
+        self.temperature = 25.0
+        self.status = "Normal"
+        self.faults = {
+            "overcharge": False,
+            "over_discharge": False,
+            "overheating": False,
+            "over_current": False,
+            "thermal_runaway": False
+        }
+
+    def update_status(self):
+        """Randomly assigns a fault with a small probability."""
+        if random.random() < FAULT_PROBABILITY:
+            fault_type = random.choice(list(self.faults.keys()))
+            self.faults[fault_type] = True
+            self.status = "Compromised"
+
+    def update_attributes(self, power, temperature_variance=0):
+        """Update cell's attributes based on power input."""
+        self.voltage = min(MAX_VOLTAGE, power * 0.05)
+        self.current = power / self.voltage if self.voltage else 0
+        self.temperature += temperature_variance
+
+class Module:
+    """Represents a module, containing multiple cells."""
+
+    def __init__(self, block, rack, module_id, num_cells):
+        self.id = module_id
+        self.rack_id = rack.id
+        self.cells = [Cell(block, rack, self, i + 1) for i in range(num_cells)]
+
+    def get_data(self):
+        """Get structured JSON data for this module."""
+        return {
+            "rack_id": self.rack_id,
+            "module_id": self.id,
+            "cells": [cell.__dict__ for cell in self.cells]
+        }
+
+class Rack:
+    """Represents a rack, containing multiple modules."""
+
+    def __init__(self, block, rack_id, num_modules, num_cells_per_module):
+        self.id = rack_id
+        self.modules = [Module(block, self, f"M{(i + 1):03}", num_cells_per_module) for i in range(num_modules)]
+
+    def get_module_data(self):
+        """Get data for all modules in this rack."""
+        return [module.get_data() for module in self.modules]
+
+class Block:
+    """Represents a block, containing multiple racks."""
+
+    def __init__(self, block_id, num_racks, num_modules_per_rack, num_cells_per_module):
+        self.id = block_id
+        self.racks = [Rack(self, f"R{(i + 1):03}", num_modules_per_rack, num_cells_per_module) for i in range(num_racks)]
+
+    def get_rack_data(self):
+        """Get data for all racks in this block."""
+        return [rack.get_module_data() for rack in self.racks]
+
+class Methods:
+    """Methods for managing simulations."""
+
+    def __init__(self, core, config):
+        self.core = core
+        self.config = config
+        self.blocks = []
+        self.wind_speed = 0.0
+        self.weather_data = []
+
+    def generate_cells(self):
+        """Generate the blocks, racks, modules, and cells."""
+        for b in range(1, self.config["blocks"] + 1):
+            block = Block(b, self.config["racks_per_block"], self.config["modules_per_rack"], self.config["cells_per_module"])
+            self.blocks.append(block)
+
+    def simulate_weather(self):
+        """Simulate weather by generating wind speed."""
+        self.wind_speed = random.uniform(self.config["min_wind_speed"], self.config["max_wind_speed"])
+        self.weather_data.append(self.wind_speed)
+
+    def calculate_power_output(self):
+        """Calculate power output based on wind speed and energy coefficient."""
+        swept_area = math.pi * (self.config["blade_length"] / 2) ** 2
+        return 0.5 * AIR_DENSITY * swept_area * (self.wind_speed ** 3) * self.config["energy_coefficient"] * self.config["plant_size"]
+
+    def simulate_energy_distribution(self):
+        """Simulate energy distribution across cells."""
+        power = self.calculate_power_output()
+        for block in self.blocks:
+            for rack in block.racks:
+                for module in rack.modules:
+                    for cell in module.cells:
+                        cell.update_attributes(power)
+                        cell.update_status()
+
+    def store_data(self):
+        """Store simulation data in JSON files."""
+        data = {"blocks": [block.get_rack_data() for block in self.blocks]}
+        with open("simulation_data.json", "w") as json_file:
+            json.dump(data, json_file, indent=4)
+
+    def send_data_to_esp32(self):
+        """Send module data to ESP32 over a dynamically selected COM port."""
+        com_ports = self.core.com_ports  # Get available COM ports
+        if not com_ports:
+            print("No COM ports available.")
+            return
+
+        com_port = com_ports[0]  # Assume first available port
+        com = "COM" + str(com_port)
+        try:
+            with serial.Serial(com, 115200, timeout=1) as ser:
+                print(f"Connected to {com}")
+
+                for block in self.blocks:
+                    for rack in block.racks:
+                        for module in rack.modules:
+                            json_data = json.dumps(module.get_data())
+                            ser.write(json_data.encode() + b'\n')
+
+                            time.sleep(1)
+                            if ser.in_waiting > 0:
+                                response = ser.readline().decode(errors="ignore").strip()
+                                print(f"ESP32 Response: {response}")
+
+        except serial.SerialException as e:
+            print(f"Error communicating with {com_port}: {e}")
+
+    def run_simulation(self):
+        """Run the full simulation process."""
+        self.generate_cells()
+        self.simulate_weather()
+        self.simulate_energy_distribution()
+        self.store_data()
+        self.send_data_to_esp32()
+        print("Simulation complete.")
