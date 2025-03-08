@@ -1,0 +1,106 @@
+import math
+import json
+from Methods import Methods  # Correct import for the Methods class
+from Methods import Methods
+from PySide6.QtCore import QObject, Signal
+
+class Core:
+    log_signal = Signal(str)  # Define signal inside QObject
+    def __init__(self):
+        # Initialize variables
+        self.methods = Methods
+        self.plant_size = None
+        self.location = None
+        self.blade_length = None
+        self.energy_coefficient = None
+        self.min_speed = None
+        self.max_wind_speed = None
+        self.block = None
+        self.rack = None
+        self.module = None
+        self.cell = None
+        self.num_turbines = None
+        self.com_ports = []  # Store COM ports
+        self.config = {}
+
+
+
+    def receive_data(self, validated_data):
+        # Store the data in the class variables
+        self.plant_size = validated_data.get("plant_size")
+
+        if validated_data.get("location") == "Onshore":
+            self.location = float(1.293)
+        elif validated_data.get("location") == "Offshore":
+            self.location = float(1.225)
+        self.blade_length = validated_data.get("blade_length")
+        self.energy_coefficient = validated_data.get("energy_coefficient")
+        #convert from KMPH to MPS
+        #ms = (kmh * 1000) / 3600
+        self.min_speed = (validated_data.get("min_speed") * 1000)/3600
+        self.max_wind_speed = (validated_data.get("max_wind_speed") * 1000)/3600
+        self.block = validated_data.get("block")
+        self.rack = validated_data.get("rack")
+        self.module = validated_data.get("module")
+        self.cell = validated_data.get("cell")
+        self.num_turbines = validated_data.get("num_turbines")
+
+        self.config = {
+            "plant_size": self.plant_size,
+            "location": self.location,
+            "blade_length": self.blade_length,
+            "energy_coefficient": self.energy_coefficient,
+            "min_wind_speed": self.min_speed,
+            "max_wind_speed": self.max_wind_speed,
+            "blocks": self.block,
+            "racks_per_block": self.rack,
+            "modules_per_rack": self.module,
+            "cells_per_module": self.cell,
+            "num_turbines": self.num_turbines
+        }
+
+        self.methods = Methods(self, self.config)
+
+        power = (1/2) * self.plant_size * self.location * (self.min_speed ** 3) * (math.pi * (self.blade_length)) * self.energy_coefficient
+        print(power)
+        # Print the stored data to confirm it's correct
+        print("From the core: ", self.config)
+        self.print_stored_data()
+        #self.run_simulation()  # Call run_simulation here!
+
+
+
+    def receive_com_ports(self, com_ports):
+        """Receive COM port data from the interface."""
+        self.com_ports = com_ports
+        print("Received COM ports in Core:", self.com_ports)
+
+        # You can now use self.com_ports for further processing
+
+    def print_stored_data(self):
+        print("Stored Data:")
+        print(f"Plant size: {self.plant_size}")
+        print(f"Location: {self.location}")
+        print(f"Blade length: {self.blade_length}")
+        print(f"Energy coefficient: {self.energy_coefficient}")
+        print(f"Min speed: {self.min_speed}")
+        print(f"Max wind speed: {self.max_wind_speed}")
+        print(f"Block: {self.block}")
+        print(f"Rack: {self.rack}")
+        print(f"Module: {self.module}")
+        print(f"Cell: {self.cell}")
+        print(f"Number of turbines: {self.num_turbines}")
+
+
+
+    def run_simulation(self):
+        """Runs the full simulation process."""
+        self.methods = Methods(self, self.config)  # Initialize Methods when Core is initialized
+
+        self.methods.generate_cells()
+        self.methods.simulate_weather()
+        self.methods.simulate_energy_distribution()
+        self.methods.store_data()
+
+        print("Simulation complete. Data stored successfully.")
+        self.methods.send_data_to_esp32()
