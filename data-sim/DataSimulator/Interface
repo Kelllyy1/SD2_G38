@@ -578,7 +578,6 @@ class HermesConfig(QWidget):
         self.setup_layout()
         self.apply_stylesheet()
         self.setup_actions()
-        self.echo()
 
     # ---------------------------------- load stylesheet ----------------------------------#
     def load_stylesheet(file_path):
@@ -980,11 +979,11 @@ class HermesConfig(QWidget):
         stylesheet = load_stylesheet(self, "resources\\style_test_001.qss")
         app.setStyleSheet(stylesheet)
 
-    def echo(self):
-        pass
-    def append_to_monitor(self, data):
-        """Append received data to QPlainTextEdit."""
+    def echo(self, data):
+        """Appends received data to the response monitor"""
+        print(f"Received: {data}")  # Debug print
         self.response.appendPlainText(data)
+
 
 
 class HermesResults(QWidget):
@@ -1391,6 +1390,8 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.window_home)
         self.stack.addWidget(self.window_config)
         self.stack.addWidget(self.window_results)
+
+        self.core.response_received.connect(self.window_config.echo, Qt.QueuedConnection)
 
         self.resize(1200, 600)
 
