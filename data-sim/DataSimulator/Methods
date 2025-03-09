@@ -142,6 +142,8 @@ class Methods:
                             if ser.in_waiting > 0:
                                 response = ser.readline().decode(errors="ignore").strip()
                                 print(f"ESP32 Response: {response}")
+                                self.core.receive_data_from_methods(response)  # Send to Core
+
 
         except serial.SerialException as e:
             print(f"Error communicating with {com_port}: {e}")
@@ -154,3 +156,5 @@ class Methods:
         self.store_data()
         self.send_data_to_esp32()
         print("Simulation complete.")
+
+
