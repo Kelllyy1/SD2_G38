@@ -4,10 +4,13 @@ from Methods import Methods  # Correct import for the Methods class
 from Methods import Methods
 from PySide6.QtCore import QObject, Signal
 
-class Core:
-    log_signal = Signal(str)  # Define signal inside QObject
-    def __init__(self):
+
+class Core(QObject):
+    response_received = Signal(str)  # Define a signal to send ESP32 data
+
+    def __init__(self, parent=None):
         # Initialize variables
+        super().__init__(parent)  # Ensure QObject is initialized
         self.methods = Methods
         self.plant_size = None
         self.location = None
@@ -23,8 +26,6 @@ class Core:
         self.com_ports = []  # Store COM ports
         self.config = {}
 
-
-
     def receive_data(self, validated_data):
         # Store the data in the class variables
         self.plant_size = validated_data.get("plant_size")
@@ -35,10 +36,10 @@ class Core:
             self.location = float(1.225)
         self.blade_length = validated_data.get("blade_length")
         self.energy_coefficient = validated_data.get("energy_coefficient")
-        #convert from KMPH to MPS
-        #ms = (kmh * 1000) / 3600
-        self.min_speed = (validated_data.get("min_speed") * 1000)/3600
-        self.max_wind_speed = (validated_data.get("max_wind_speed") * 1000)/3600
+        # convert from KMPH to MPS
+        # ms = (kmh * 1000) / 3600
+        self.min_speed = (validated_data.get("min_speed") * 1000) / 3600
+        self.max_wind_speed = (validated_data.get("max_wind_speed") * 1000) / 3600
         self.block = validated_data.get("block")
         self.rack = validated_data.get("rack")
         self.module = validated_data.get("module")
@@ -61,14 +62,13 @@ class Core:
 
         self.methods = Methods(self, self.config)
 
-        power = (1/2) * self.plant_size * self.location * (self.min_speed ** 3) * (math.pi * (self.blade_length)) * self.energy_coefficient
+        power = (1 / 2) * self.plant_size * self.location * (self.min_speed ** 3) * (
+                    math.pi * (self.blade_length)) * self.energy_coefficient
         print(power)
         # Print the stored data to confirm it's correct
         print("From the core: ", self.config)
         self.print_stored_data()
-        #self.run_simulation()  # Call run_simulation here!
-
-
+        # self.run_simulation()  # Call run_simulation here!
 
     def receive_com_ports(self, com_ports):
         """Receive COM port data from the interface."""
@@ -91,8 +91,6 @@ class Core:
         print(f"Cell: {self.cell}")
         print(f"Number of turbines: {self.num_turbines}")
 
-
-
     def run_simulation(self):
         """Runs the full simulation process."""
         self.methods = Methods(self, self.config)  # Initialize Methods when Core is initialized
@@ -104,3 +102,7 @@ class Core:
 
         print("Simulation complete. Data stored successfully.")
         self.methods.send_data_to_esp32()
+
+    def receive_data_from_methods(self, data):
+        """This method receives data from Methods and emits a signal to update the UI."""
+        self.response_received.emit(data)  # Send data to the interface
