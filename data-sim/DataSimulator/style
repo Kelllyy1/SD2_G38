@@ -1,0 +1,546 @@
+/* Home */
+
+/* Apply styles to the main window */
+QWidget#window {
+    background-color: #fcf4eb;
+}
+
+QWidget#left {
+    background-color: transparent;
+    max-width: 200px;;
+    min-width: 200px;
+}
+
+QWidget#right {
+    background-color: transparent;
+}
+
+QWidget#topRight {
+    background-color: #fefaf5;
+    border: 1px solid #decdbc;
+    border-radius: 10px;
+    min-width: 100%;
+}
+QWidget#bottomRight {
+    background-color: #fefaf5;
+    border: 1px solid #decdbc;
+    border-radius: 10px;
+}
+QWidget#interact {
+   background-color: #fefaf5;
+    border: 1px solid #decdbc;
+    border-radius: 10px;
+}
+QWidget#interactInput {
+    background-color: white;
+        border: 1px solid #decdbc;
+    border-radius: 3px;
+}
+QWidget#interactButton {
+    background: qlineargradient(spread:pad,
+      x1:0, y1:0, x2:1, y2:0,
+      stop:0 #ffad6b,
+      stop:1 #ff7a98);
+      color: white;
+      border: 1px solid #ff6252;
+      padding: 3px;
+    min-width: 60px;
+    max-width: 60px;
+    border-radius: 5px;
+}
+/* Hover effect */
+QWidget#interactButton:hover {
+    border: 2px solid #00FFFF; /* A slightly different border color on hover */
+}
+
+/* Click effect */
+QWidget#interactButton:pressed {
+    transform: scale(1.05); /* Increases the size by 1% on click */
+    border: 2px solid #388e3c; /* Darker border color on click */
+}
+QWidget#sidebar {
+    background-color: #fefaf5;
+    border: 1px solid #decdbc;
+    border-radius: 10px;
+}
+QWidget#sidebarInnards {
+    background-color: #fffdfa;
+    border: 1px solid #decdbc;
+    border-radius: 10px;
+}
+QWidget#sidebarLogo {
+    background-color: transparent;
+    padding: 10px;
+    font-family: "Font_003";
+    font-size: 150px;
+    color: #ff9580;
+    border-bottom: 1px solid #decdbc;
+}
+QWidget#sidebarTitle {
+    background-color: transparent;
+    font-family: "LEMON MILK medium";
+    font-size: 20px;
+}
+QWidget#sidebarDescription {
+    background-color: transparent;
+    qproperty-wordWrap: true;
+    padding: 10px;
+}
+QWidget#sidebarButton1 {
+    background: qlineargradient(spread:pad,
+      x1:0, y1:0, x2:1, y2:0,
+      stop:0 #ffad6b,
+      stop:1 #ff7a98);
+      color: white;
+      border: 1px solid #ff6252;
+      padding: 3px;
+    min-width: 100px;
+    max-width: 100px;
+    border-radius: 5px;
+}
+QWidget#sidebarButton2 {
+    background: qlineargradient(spread:pad,
+      x1:0, y1:0, x2:1, y2:0,
+      stop:0 #ffad6b,
+      stop:1 #ff7a98);
+      color: white;
+      border: 1px solid #ff6252;
+      padding: 3px;
+    min-width: 100px;
+    max-width: 100px;
+    border-radius: 5px;
+}
+QWidget#sidebarButton3 {
+    background: qlineargradient(spread:pad,
+      x1:0, y1:0, x2:1, y2:0,
+      stop:0 #ffad6b,
+      stop:1 #ff7a98);
+      color: white;
+      border: 1px solid #ff6252;
+      padding: 3px;
+    min-width: 100px;
+    max-width: 100px;
+    border-radius: 5px;
+}
+QWidget#sidebarSpace {
+    background-color: transparent;
+}
+QWidget#titles {
+    background-color: green;
+}
+QWidget#titleTop {
+    background-color: transparent;
+    color: white;
+}
+QWidget#titleBottom {
+    background-color: transparent;
+    color: white;
+}
+QWidget#box {
+    background-color: #fffdfa;
+    border: 1px solid #decdbc;
+    border-top-left-radius: 0px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+
+QWidget#tab {
+    background: qlineargradient(spread:pad,
+      x1:0, y1:0, x2:1, y2:0,
+      stop:0 #ffad6b,
+      stop:1 #ff7a98);
+      color: white;
+      border: 1px solid #ff6252;
+      padding: 3px;
+    max-width: 120px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+}
+
+QWidget#boxBottom {
+    background-color: #fffdfa;
+    border: 1px solid #decdbc;
+    border-top-left-radius: 0px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+
+QWidget#tabBottom {
+    background: qlineargradient(spread:pad,
+      x1:0, y1:0, x2:1, y2:0,
+      stop:0 #ffad6b,
+      stop:1 #ff7a98);
+      color: white;
+      border: 1px solid #ff6252;
+      padding: 3px;
+    max-width: 120px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+}
+
+/*innards for top bar */
+/*plant*/
+QWidget#plant {
+    background-color: transparent;
+}
+
+/*plant elements */
+QWidget#plantTitle {
+    background-color: transparent;
+    color: #decdbc;
+}
+QWidget#plantIcon {
+    background-color: transparent;
+        font-family: "Font_003";
+    font-size: 100px;
+    color: #ff9580;
+}
+QWidget#plantParameters {
+    background-color: transparent;
+}
+QWidget#plantInputs {
+    background-color: transparent;
+}
+QWidget#plantInputsLeftNumberTitle {
+    background-color: transparent;
+}
+QWidget#plantInputsLeftNumberInput {
+    background-color: white;
+        border: 1px solid #decdbc;
+    border-radius: 3px;
+}
+QWidget#plantInputsLeftLocationTitle {
+    background-color: transparent;
+}
+QWidget#plantInputsLeftLocationInput {
+    background-color: transparent;
+}
+QWidget#plantInputsLeft {
+    background-color: transparent;
+}
+QWidget#plantInputsRight {
+    background-color: transparent;
+}
+
+/*turbine inputs*/
+QWidget#turbine {
+    background-color: transparent;
+    border-left: 1px solid #decdbc;
+    border-right: 1px solid #decdbc;
+}
+/*turbine elements */
+QWidget#turbineTitle {
+    background-color: transparent;
+    color: #decdbc;
+}
+QWidget#turbineIcon {
+    background-color: transparent;
+        font-family: "Font_003";
+    font-size: 100px;
+    color: #ff9580;
+}
+QWidget#turbineParameters {
+    background-color: transparent;
+}
+QWidget#turbineInputs {
+    background-color: transparent;
+}
+QWidget#turbineInputsLeftNumberTitle {
+    background-color: transparent;
+}
+QWidget#turbineInputsLeftNumberInput {
+    background-color: white;
+    border: 1px solid #decdbc;
+    border-radius: 3px;
+
+}
+QWidget#turbineInputsLeftLocationTitle {
+    background-color: transparent;
+}
+QWidget#turbineInputsLeftLocationInput {
+    background-color: white;
+    border: 1px solid #decdbc;
+    border-radius: 3px;
+}
+QWidget#turbineInputsLeft {
+    background-color: transparent;
+}
+QWidget#turbineInputsRight {
+    background-color: transparent;
+}
+/*weather*/
+/* Weather elements */
+QWidget#weatherTitle {
+    background-color: transparent;
+    color: #decdbc;
+}
+QWidget#weatherIcon {
+    background-color: transparent;
+    font-family: "Font_003";
+    font-size: 100px;
+    color: #ff9580;
+}
+QWidget#weatherParameters {
+    background-color: transparent;
+}
+QWidget#weatherInputs {
+    background-color: transparent;
+}
+QWidget#weatherInputsLeftNumberTitle {
+    background-color: transparent;
+
+}
+QWidget#weatherInputsLeftNumberInput {
+    background-color: white;
+    border: 1px solid #decdbc;
+    border-radius: 3px;
+}
+QWidget#weatherInputsLeftLocationTitle {
+    background-color: transparent;
+}
+QWidget#weatherInputsLeftLocationInput {
+    background-color: white;
+        border: 1px solid #decdbc;
+    border-radius: 3px;
+}
+QWidget#weatherInputsLeft {
+    background-color: transparent;
+}
+QWidget#weatherInputsRight {
+    background-color: transparent;
+}
+
+
+QWidget#block {
+    background-color: transparent;
+    border-right: 1px solid #decdbc;
+}
+QWidget#rack {
+    background-color: transparent;
+
+}
+QWidget#module {
+    background-color: transparent;
+        border-left: 1px solid #decdbc;
+
+}
+QWidget#cell {
+    background-color: transparent;
+        border-left: 1px solid #decdbc;
+}
+/* first block for BESS config*/
+QWidget#blockTitle {
+    background-color: transparent;
+}
+QWidget#blockIcon {
+    background-color: transparent;
+        font-family: "Font_003";
+    font-size: 100px;
+    color: #ff9580;
+}
+QWidget#blockInput {
+    background-color: white;
+        border: 1px solid #decdbc;
+    border-radius: 3px;
+}
+QWidget#moduleTitle {
+    background-color: transparent;
+}
+QWidget#moduleIcon {
+    background-color: transparent;
+        font-family: "Font_003";
+    font-size: 100px;
+    color: #ff8c88;
+}
+QWidget#moduleInput {
+    background-color: white;
+        border: 1px solid #decdbc;
+    border-radius: 3px;
+}
+
+QWidget#cellTitle {
+    background-color: transparent;
+}
+QWidget#cellIcon {
+    background-color: transparent;
+        font-family: "Font_003";
+    font-size: 100px;
+    color: #ff9580;
+}
+QWidget#cellInput {
+    background-color: white;
+        border: 1px solid #decdbc;
+    border-radius: 3px;
+}
+QWidget#cellTitle {
+    background-color: transparent;
+}
+QWidget#cellIcon {
+    background-color: transparent;
+}
+QWidget#cellInput {
+    background-color: white;
+        border: 1px solid #decdbc;
+    border-radius: 3px;
+}
+QWidget#rackTitle {
+    background-color: transparent;
+}
+QWidget#rackIcon {
+    background-color: transparent;
+        font-family: "Font_003";
+    font-size: 100px;
+    color: #ff9580;
+}
+QWidget#rackInput {
+    background-color: white;
+        border: 1px solid #decdbc;
+    border-radius: 3px;
+}
+
+QWidget#weather {
+    background-color: transparent;
+}
+
+/* Ensure layout respects spacing */
+QVBoxLayout {
+    margin: 0px;
+    spacing: 10px;
+}
+
+/*collapse*/
+QPushButton#collapse {
+    color: #decdbc;
+    background-color: transparent;
+    font-weight: bold;
+    text-align: right;   /* Ensures text alignment */
+    font-size: 20px;
+
+}
+
+/* navigation bar */
+
+/*Node Configuration*/
+QWidget#chassis {
+    padding: 20px;
+    background-color: transparent;
+    color: #decdbc;
+    border: none;
+    border-radius: 5px;
+}
+QWidget#nodePort {
+    padding: 20px;
+    background-color: orange;
+    color: #decdbc;
+    border: none;
+    border-radius: 5px;
+}
+
+/* error */
+QMessageBox{
+
+}
+
+/*Results*/
+
+QScrollArea {
+        border: 2px solid #cccccc;  /* Optional border */
+    }
+    QScrollBar:vertical {
+        border: none;
+        background: #f0f0f0;
+        width: 8px;
+        margin: 2px 0 2px 0;
+    }
+    QScrollBar::handle:vertical {
+        background: #888;
+        min-height: 20px;
+    }
+    QScrollBar::handle:vertical:hover {
+        background: #555;
+    }
+    QScrollBar::sub-line:vertical, QScrollBar::add-line:vertical {
+        background: none;
+        height: 0px;
+    }
+
+    QWidget#scrollDetails{
+        background-color: transparent;
+        border: none;
+    }
+    QScrollArea{
+        background-color: transparent;
+        border: none;
+    }
+    QWidget#leftButtons{
+        background-color: transparent;
+    }
+    QWidget#horSpace{
+        background-color: transparent;
+    }
+    QPushButton#skipConfig{
+        background: qlineargradient(spread:pad,
+      x1:0, y1:0, x2:1, y2:0,
+      stop:0 #ffad6b,
+      stop:1 #ff7a98);
+      color: white;
+      border: 1px solid #ff6252;
+      padding: 3px;
+    border-radius: 5px;
+    }
+    QPushButton#submitConfig{
+        background: qlineargradient(spread:pad,
+      x1:0, y1:0, x2:1, y2:0,
+      stop:0 #ffad6b,
+      stop:1 #ff7a98);
+      color: white;
+      border: 1px solid #ff6252;
+      padding: 3px;
+    border-radius: 5px;
+    }
+
+    /* progress */
+    QWidget#rightButtons{
+        background-color: transparent;
+    }
+    QWidget#horSpaceProgress{
+        background-color: transparent;
+    }
+
+    QPushButton#resultsProgress{
+        background: qlineargradient(spread:pad,
+      x1:0, y1:0, x2:1, y2:0,
+      stop:0 #ffad6b,
+      stop:1 #ff7a98);
+      color: white;
+      border: 1px solid #ff6252;
+      padding: 3px;
+    border-radius: 5px;
+    }
+
+    QPlainTextEdit#response{
+        border: 1px solid #decdbc;
+        border-radius: 5px;
+    }
+
+    QWidget#statusBar{
+        background-color: transparent;
+    }
+
+    QLabel#statusTitle{
+    background-color: transparent;
+    }
+
+    QLabel#statusSpaces{
+    background-color: transparent;
+    }
+
+    QLabel#statusUpdate{
+    background-color: green;
+    }
