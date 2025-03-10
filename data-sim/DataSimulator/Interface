@@ -1,3 +1,4 @@
+import sys
 import math
 import serial.tools.list_ports
 
@@ -6,6 +7,12 @@ from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSizeP
     QRadioButton, QPushButton, QMenu, QMenuBar, QMessageBox, QMainWindow, QStackedWidget, QScrollArea, QPlainTextEdit
 from PySide6.QtCore import QFile, QTextStream, Qt
 from PySide6.QtGui import QIntValidator
+
+import matplotlib
+matplotlib.use('Qt5Agg')  # Explicitly use Qt5Agg if needed.
+
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas  # Use Qt5Agg
+from matplotlib.figure import Figure
 
 from Core import Core
 from Methods import Methods
@@ -158,6 +165,8 @@ class HermesHome(QWidget):
         self.interact = QWidget()
         self.interact.setObjectName("interact")
         self.interactInput = QLineEdit()
+        # placeholder
+        self.interactInput.setText("Untitled-01")
         self.interactInput.setPlaceholderText("Filename")
         self.interactInput.setObjectName("interactInput")
         self.interactButton = QPushButton("Next")
@@ -185,7 +194,8 @@ class HermesHome(QWidget):
         self.plantInputsLeftNumberTitle = QLabel("Number of Turbines")
         self.plantInputsLeftNumberTitle.setObjectName("plantInputsLeftNumberTitle")
         self.plantInputsLeftNumberInput = QLineEdit()
-        # self.plantInputsLeftNumberInput.setText("3")
+        # placeholder
+        self.plantInputsLeftNumberInput.setText("3")
         self.plantInputsLeftNumberInput.setPlaceholderText("Max = 1000")
         self.plantInputsLeftNumberInput.setObjectName("plantInputsLeftNumberInput")
         self.plantInputsRight = QWidget()
@@ -209,12 +219,16 @@ class HermesHome(QWidget):
         self.turbineInputsLeftNumberTitle = QLabel("Blade Length")
         self.turbineInputsLeftNumberTitle.setObjectName("turbineInputsLeftNumberTitle")
         self.turbineInputsLeftNumberInput = QLineEdit()
+        # placeholder
+        self.turbineInputsLeftNumberInput.setText("80")
         self.turbineInputsLeftNumberInput.setObjectName("turbineInputsLeftNumberInput")
         self.turbineInputsRight = QWidget()
         self.turbineInputsRight.setObjectName("turbineInputsRight")
         self.turbineInputsLeftLocationTitle = QLabel("Energy Coefficient")
         self.turbineInputsLeftLocationTitle.setObjectName("turbineInputsLeftLocationTitle")
         self.turbineInputsLeftLocationInput = QLineEdit()
+        # placeholder
+        self.turbineInputsLeftLocationInput.setText(".3")
         self.turbineInputsLeftLocationInput.setPlaceholderText("Max = 0.59")
         self.turbineInputsLeftLocationInput.setObjectName("turbineInputsLeftLocationInput")
         self.weather = QWidget()
@@ -232,12 +246,16 @@ class HermesHome(QWidget):
         self.weatherInputsLeftNumberTitle = QLabel("Min. Wind Speed")
         self.weatherInputsLeftNumberTitle.setObjectName("weatherInputsLeftNumberTitle")
         self.weatherInputsLeftNumberInput = QLineEdit()
+        # placeholder
+        self.weatherInputsLeftNumberInput.setText("3")
         self.weatherInputsLeftNumberInput.setObjectName("weatherInputsLeftNumberInput")
         self.weatherInputsRight = QWidget()
         self.weatherInputsRight.setObjectName("weatherInputsRight")
         self.weatherInputsLeftLocationTitle = QLabel("Max. Wind Speed")
         self.weatherInputsLeftLocationTitle.setObjectName("weatherInputsLeftLocationTitle")
         self.weatherInputsLeftLocationInput = QLineEdit()
+        # placeholder
+        self.weatherInputsLeftLocationInput.setText("4")
         self.weatherInputsLeftLocationInput.setPlaceholderText("Max = 40")
         self.weatherInputsLeftLocationInput.setObjectName("weatherInputsLeftLocationInput")
         self.block = QWidget()
@@ -247,6 +265,8 @@ class HermesHome(QWidget):
         self.blockTitle = QLabel("Block")
         self.blockTitle.setObjectName("blockTitle")
         self.blockInput = QLineEdit()
+        # placeholder
+        self.blockInput.setText("1")
         self.blockInput.setPlaceholderText("Max = 10")
         self.blockInput.setObjectName("blockInput")
         self.rack = QWidget()
@@ -256,6 +276,8 @@ class HermesHome(QWidget):
         self.rackTitle = QLabel("Rack")
         self.rackTitle.setObjectName("rackTitle")
         self.rackInput = QLineEdit()
+        # placeholder
+        self.rackInput.setText("1")
         self.rackInput.setPlaceholderText("Max = 10")
         self.rackInput.setObjectName("rackInput")
         self.module = QWidget()
@@ -265,6 +287,8 @@ class HermesHome(QWidget):
         self.moduleTitle = QLabel("Module")
         self.moduleTitle.setObjectName("moduleTitle")
         self.moduleInput = QLineEdit()
+        # placeholder
+        self.moduleInput.setText("4")
         self.moduleInput.setPlaceholderText("Max = 10")
         self.moduleInput.setObjectName("moduleInput")
         self.cell = QWidget()
@@ -274,6 +298,8 @@ class HermesHome(QWidget):
         self.cellTitle = QLabel("Cell")
         self.cellTitle.setObjectName("cellTitle")
         self.cellInput = QLineEdit()
+        # placeholder
+        self.cellInput.setText("10")
         self.cellInput.setPlaceholderText("Max = 10")
         self.cellInput.setObjectName("cellInput")
         self.titleTop = QLabel("Plant Configuration")
@@ -789,8 +815,10 @@ class HermesConfig(QWidget):
         self.statusSpace = QLabel()
         self.statusSpace.setObjectName("statusSpace")
 
-        self.statusUpdate = QLabel("")
+        # ready, working, complete
+        self.statusUpdate = QLabel("Ready")
         self.statusUpdate.setObjectName("statusUpdate")
+        self.statusUpdate.setAlignment(Qt.AlignCenter)
 
         self.statusBar = QWidget()
         self.statusBar.setObjectName("statusBar")
@@ -981,9 +1009,31 @@ class HermesConfig(QWidget):
 
     def echo(self, data):
         """Appends received data to the response monitor"""
+        self.statusUpdate.setStyleSheet("""
+                                        background: qlineargradient(spread:pad,
+      x1:0, y1:0, x2:1, y2:0,
+      stop:0 #ffaa00,
+      stop:1 #ffe53f);
+      color: white;
+      border: 1px solid #ffaa00;
+      padding: 3px;
+    border-radius: 5px;
+                                        """)
+        self.statusUpdate.setText("Working")
         print(f"Received: {data}")  # Debug print
         self.response.appendPlainText(data)
-
+        if not data.strip():
+            self.statusUpdate.setStyleSheet("""
+                                                background: qlineargradient(spread:pad,
+              x1:0, y1:0, x2:1, y2:0,
+              stop:0 #00ff66,
+              stop:1 #8fff15);
+              color: white;
+              border: 1px solid #00ff66;
+              padding: 3px;
+            border-radius: 5px;
+                                                """)
+            self.statusUpdate.setText("Complete")
 
 
 class HermesResults(QWidget):
@@ -1069,58 +1119,14 @@ class HermesResults(QWidget):
         self.bottomRight_layout = QVBoxLayout()
         self.tab_layout = QVBoxLayout()
         self.box_layout = QHBoxLayout()
+        self.windChart_layout = QVBoxLayout()
+        self.windChartBottom_layout = QHBoxLayout()
         self.tabBottom_layout = QVBoxLayout()
         self.boxBottom_layout = QHBoxLayout()
         self.leftButtons_layout = QHBoxLayout()
         self.rightButtons_layout = QHBoxLayout()
-
-        content_widget = QWidget()
-        content_widget.setObjectName("scrollDetails")
-        chassis_layout = QVBoxLayout(content_widget)
-        chassis = QWidget()
-        chassis.setObjectName("chassis")
-        chassis.setLayout(chassis_layout)
-        chassis.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-        nodePort_layout = QHBoxLayout()
-        nodePort = QWidget()
-        nodePort.setObjectName("nodePort")
-        nodePort.setLayout(nodePort_layout)
-
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)  # Allows resizing content dynamically
-
-        self.comNumber_fields = []
-        chassis_layout.setAlignment(Qt.AlignTop)
-        nodePort_layouts = []
-
-        for i in range(2):  # Change this to any number of rows you want
-            nodePort_layout = QHBoxLayout()  # Create a new layout for each row
-            nodePort_layouts.append(nodePort_layout)  # Store reference
-
-            # Widgets
-            nodeName = QLabel(f"Node {i + 1}")
-            comLabel = QLabel("COM:")
-            comNumber = QLineEdit()
-
-            # **Apply Integer Validator**
-            int_validator = QIntValidator(1, 99)  # Limits to COM1 - COM99
-            comNumber.setValidator(int_validator)
-
-            # Add widgets with stretch for spacing control
-            nodePort_layout.addWidget(nodeName, stretch=6)
-            nodePort_layout.addWidget(comLabel, stretch=1)
-            nodePort_layout.addWidget(comNumber, stretch=1)
-
-            # Store the reference of the QLineEdit in the list
-            self.comNumber_fields.append(comNumber)
-
-            # Add the row layout to the main vertical layout
-            chassis_layout.addLayout(nodePort_layout)
-
-        content_widget.setLayout(chassis_layout)
-        scroll_area.setWidget(content_widget)
-        self.box_layout.addWidget(scroll_area, stretch=1)
+        self.container_layout = QVBoxLayout()
+        self.weatherWindow_layout = QVBoxLayout()
 
     # ---------------------------------- set-up widgets  ----------------------------------#
 
@@ -1153,47 +1159,49 @@ class HermesResults(QWidget):
         self.topRight.setObjectName("topRight")
         self.bottomRight = QWidget()
         self.bottomRight.setObjectName("bottomRight")
+
+        self.weatherWindow = QWidget()
+        self.weatherWindow.setObjectName("bottomRight")
+
         self.tab = QWidget()
         self.tab.setObjectName("tab")
         self.box = QWidget()
         self.box.setObjectName("box")
+
         self.tabBottom = QWidget()
         self.tabBottom.setObjectName("tabBottom")
+
         self.boxBottom = QWidget()
         self.boxBottom.setObjectName("boxBottom")
 
-        self.titleTop = QLabel("Port Configuration")
+        self.tabRight= QWidget()
+        self.tabRight.setObjectName("tabBottom")
+        self.boxRight = QWidget()
+        self.boxRight.setObjectName("boxBottom")
+
+        self.container = QWidget()
+        self.container.setObjectName("container")
+
+        self.titleTop = QLabel("Trends")
         self.titleTop.setObjectName("titleTop")
-        self.titleBottom = QLabel("Progress")
+
+        self.titleBottom = QLabel("Statistics")
         self.titleBottom.setObjectName("titleBottom")
+
+        self.windChartTitle= QLabel("Weather")
+        self.windChartTitle.setObjectName("windChartTitle")
+
+        self.windChart = QWidget()
+        self.windChart.setObjectName("windChart")
+
+        self.windChartBox= QWidget()
+        self.windChartBox.setObjectName("windChartBox")
+
         self.window_home_layout = QVBoxLayout()
 
         # ---- centering icons ---#
         self.sidebarLogo.setAlignment(Qt.AlignCenter)
 
-        # ---- config buttons ---- #
-        self.leftButtons = QWidget()
-        self.leftButtons.setObjectName("leftButtons")
-
-        self.horSpace = QWidget()
-        self.horSpace.setObjectName("horSpace")
-
-        self.skipConfig = QPushButton("Skip")
-        self.skipConfig.setObjectName("skipConfig")
-
-        self.submitConfig = QPushButton("Submit")
-        self.submitConfig.setObjectName("submitConfig")
-
-        # ---- progress buttons ---- #
-
-        self.rightButtons = QLabel()
-        self.rightButtons.setObjectName("rightButtons")
-
-        self.horSpaceProgress = QLabel()
-        self.horSpaceProgress.setObjectName("horSpaceProgress")
-
-        self.resultsProgress = QPushButton("Results")
-        self.resultsProgress.setObjectName("resultsProgress")
 
     # ---------------------------------- set-up layouts  ----------------------------------#
     def setup_layout(self):
@@ -1223,29 +1231,30 @@ class HermesResults(QWidget):
         self.sidebarInnards.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.sidebarSpace.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.right.setLayout(self.right_layout)
+        self.container.setLayout(self.container_layout)
         self.right_layout.addWidget(self.topRight, stretch=6)
-        self.right_layout.addWidget(self.bottomRight, stretch=6)
+        self.right_layout.addWidget(self.container, stretch=6)
         self.topRight.setLayout(self.topRight_layout)
         self.topRight_layout.addWidget(self.tab, stretch=1)
         self.topRight_layout.addWidget(self.box, stretch=16)
 
-        self.leftButtons_layout.addWidget(self.horSpace, stretch=6)
-        self.leftButtons_layout.addWidget(self.skipConfig, stretch=2)
-        self.leftButtons_layout.addWidget(self.submitConfig, stretch=2)
-
-        self.topRight_layout.addWidget(self.leftButtons, stretch=1)
-
         self.topRight.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+
         self.bottomRight.setLayout(self.bottomRight_layout)
         self.bottomRight_layout.addWidget(self.tabBottom, stretch=1)
         self.bottomRight_layout.addWidget(self.boxBottom, stretch=16)
 
-        self.rightButtons_layout.addWidget(self.horSpaceProgress, stretch=8)
-        self.rightButtons_layout.addWidget(self.resultsProgress, stretch=2)
+        self.weatherWindow.setLayout(self.weatherWindow_layout)
+        self.weatherWindow_layout.addWidget(self.windChart, stretch=1)
+        self.weatherWindow_layout.addWidget(self.windChartBox, stretch=16)
 
-        self.bottomRight_layout.addWidget(self.rightButtons, stretch=1)
+        self.container_layout.addWidget(self.bottomRight, stretch=1)
+        self.container_layout.addWidget(self.weatherWindow, stretch=1)
+        self.container_layout.setContentsMargins(0, 0, 0, 0)
 
         self.bottomRight.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.weatherWindow.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+
         self.tab.setLayout(self.tab_layout)
         self.tab_layout.addWidget(self.titleTop, stretch=1)
         self.box.setLayout(self.box_layout)
@@ -1254,13 +1263,16 @@ class HermesResults(QWidget):
         self.tabBottom_layout.addWidget(self.titleBottom, stretch=1)
         self.boxBottom.setLayout(self.boxBottom_layout)
 
+        self.windChart.setLayout(self.windChart_layout)
+        self.windChart_layout.addWidget(self.windChartTitle)
+
         self.boxBottom_layout.setSpacing(0)
+        self.weatherWindow_layout.setSpacing(0)
+
 
         self.topRight_layout.setSpacing(0)
         self.bottomRight_layout.setSpacing(0)
 
-        self.leftButtons.setLayout(self.leftButtons_layout)
-        self.rightButtons.setLayout(self.rightButtons_layout)
 
     def get_available_com_ports(self):
         """Retrieve a list of available COM ports."""
@@ -1316,7 +1328,6 @@ class HermesResults(QWidget):
         """Set up actions for buttons."""
         # Connect the button click event to the function that prints input values
         self.sidebarButton1.clicked.connect(self.on_submit_button_clicked)
-        self.submitConfig.clicked.connect(self.validate_com_ports)
 
     def on_submit_button_clicked(self):
         # Ensure we have a valid parent with QStackedWidget
@@ -1386,10 +1397,10 @@ class MainWindow(QMainWindow):
         self.window_results = HermesResults(self.core)
 
         # ---- adding the windows to the stack for the page order ----#
-
+        #self.stack.addWidget(self.window_results)
         self.stack.addWidget(self.window_home)
         self.stack.addWidget(self.window_config)
-        self.stack.addWidget(self.window_results)
+        #self.stack.addWidget(self.window_results)
 
         self.core.response_received.connect(self.window_config.echo, Qt.QueuedConnection)
 
