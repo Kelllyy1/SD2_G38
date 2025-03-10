@@ -1,0 +1,78 @@
+#include <ArduinoJson.h>
+
+void setup() {
+  Serial.begin(115200);
+  while (!Serial) {
+    ;  // Wait for the serial port to connect
+  }
+  Serial.println("ESP32 ready to receive data!");
+}
+
+void loop() {
+  if (Serial.available()) {
+    String data = Serial.readStringUntil('\n');  // Read the data sent over serial
+    Serial.println("From Node 1: Data received: " + data);
+    
+    DynamicJsonDocument doc(2048);  // Create a dynamic JSON document with appropriate size
+    DeserializationError error = deserializeJson(doc, data);  // Deserialize JSON data
+
+    if (error) {
+      Serial.println("Failed to parse JSON");
+      return;
+    }
+
+    // Extract the module-level data
+    const char* deviceID = doc["deviceID"];  // "deviceID" instead of "module_id"
+    bool isProcessed = doc["isProcessed"];  // isProcessed flag
+    Serial.print("Device ID: ");
+    Serial.println(deviceID);
+    Serial.print("Processed: ");
+    Serial.println(isProcessed ? "Yes" : "No");
+    
+    // Extract cells array
+    JsonArray cells = doc["cells"];
+    for (JsonVariant cell : cells) {
+        const char* cell_id = cell["id"];
+        float voltage = cell["voltage"];
+        float current = cell["current"];
+        float temperature = cell["temperature"];
+        const char* status = cell["status"];
+        
+        // Extract the fault data for the cell (just one fault, as per your description)
+        const char* fault = "";
+        
+        if (cell["faults"]["overcharge"]) {
+            fault = "Overcharge";
+        } else if (cell["faults"]["over_discharge"]) {
+            fault = "Over-discharge";
+        } else if (cell["faults"]["overheating"]) {
+            fault = "Overheating";
+        } else if (cell["faults"]["thermal_runaway"]) {
+            fault = "Thermal Runaway";
+        } else if (cell["faults"]["over_current"]) {
+            fault = "Over-current";
+        } else {
+            fault = "Normal";  // If no faults, it's normal
+        }
+
+        // Print cell-level data
+        Serial.print("  Cell ID: ");
+        Serial.println(cell_id);
+        Serial.print("    Voltage: ");
+        Serial.print(voltage);
+        Serial.println(" V");
+        Serial.print("    Current: ");
+        Serial.print(current);
+        Serial.println(" A");
+        Serial.print("    Temperature: ");
+        Serial.print(temperature);
+        Serial.println(" °C");
+        Serial.print("    Status: ");
+        Serial.println(status);
+        
+        // Print the fault as a single string
+        Serial.print("    Faults: ");
+        Serial.println(fault);  // Print the fault type (e.g., Overcharge, Over-discharge, etc.)
+    }
+  }
+}
