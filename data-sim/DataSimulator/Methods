@@ -3,11 +3,13 @@ import json
 import math
 import time
 import serial
+from PySide6.QtCore import QThread, Signal
 
 # Constants
 AIR_DENSITY = 1.225
 MAX_VOLTAGE = 2.7
-FAULT_PROBABILITY = 0.01
+FAULT_PROBABILITY = 0.5
+
 
 class Cell:
     """Represents a single cell in the hierarchy with attributes for simulation."""
@@ -39,12 +41,21 @@ class Cell:
         self.current = power / self.voltage if self.voltage else 0
         self.temperature += temperature_variance
 
+    def get_fault(self):
+        """Return the fault type as a string if any, otherwise 'Normal'."""
+        for fault, is_active in self.faults.items():
+            if is_active:
+                return fault.capitalize()  # Capitalize the fault name (e.g., 'Overcharge')
+        return "Normal"  # If no faults are active, return 'Normal'
+
+
 class Module:
     """Represents a module, containing multiple cells."""
 
     def __init__(self, block, rack, module_id, num_cells):
         self.id = module_id
         self.rack_id = rack.id
+        self.isProcessed = False  # Flag for processed state
         self.cells = [Cell(block, rack, self, i + 1) for i in range(num_cells)]
 
     def get_data(self):
@@ -52,8 +63,15 @@ class Module:
         return {
             "rack_id": self.rack_id,
             "module_id": self.id,
-            "cells": [cell.__dict__ for cell in self.cells]
+            "cells": [
+                {
+                    **cell.__dict__,
+                    "faults": cell.get_fault()  # Replace the faults with a string (e.g., 'Overcharge', 'Normal')
+                }
+                for cell in self.cells
+            ]
         }
+
 
 class Rack:
     """Represents a rack, containing multiple modules."""
@@ -66,6 +84,7 @@ class Rack:
         """Get data for all modules in this rack."""
         return [module.get_data() for module in self.modules]
 
+
 class Block:
     """Represents a block, containing multiple racks."""
 
@@ -76,6 +95,7 @@ class Block:
     def get_rack_data(self):
         """Get data for all racks in this block."""
         return [rack.get_module_data() for rack in self.racks]
+
 
 class Methods:
     """Methods for managing simulations."""
@@ -90,8 +110,9 @@ class Methods:
     def generate_cells(self):
         """Generate the blocks, racks, modules, and cells."""
         for b in range(1, self.config["blocks"] + 1):
-            block = Block(b, self.config["racks_per_block"], self.config["modules_per_rack"], self.config["cells_per_module"])
-            self.blocks.append(block)
+            block = Block(b, self.config["racks_per_block"], self.config["modules_per_rack"],
+                          self.config["cells_per_module"])
+            self.blocks.append(block)  # This appends Block, not Module
 
     def simulate_weather(self):
         """Simulate weather by generating wind speed."""
@@ -101,7 +122,8 @@ class Methods:
     def calculate_power_output(self):
         """Calculate power output based on wind speed and energy coefficient."""
         swept_area = math.pi * (self.config["blade_length"] / 2) ** 2
-        return 0.5 * AIR_DENSITY * swept_area * (self.wind_speed ** 3) * self.config["energy_coefficient"] * self.config["plant_size"]
+        return 0.5 * AIR_DENSITY * swept_area * (self.wind_speed ** 3) * self.config["energy_coefficient"] * \
+            self.config["plant_size"]
 
     def simulate_energy_distribution(self):
         """Simulate energy distribution across cells."""
@@ -120,33 +142,43 @@ class Methods:
             json.dump(data, json_file, indent=4)
 
     def send_data_to_esp32(self):
-        """Send module data to ESP32 over a dynamically selected COM port."""
-        com_ports = self.core.com_ports  # Get available COM ports
+        """Start the serial worker threads for live updates, distributing across available COM ports."""
+        com_ports = self.core.com_ports
         if not com_ports:
             print("No COM ports available.")
             return
 
-        com_port = com_ports[0]  # Assume first available port
-        com = "COM" + str(com_port)
-        try:
-            with serial.Serial(com, 115200, timeout=1) as ser:
-                print(f"Connected to {com}")
+        num_ports = len(com_ports)
+        print(f"Started {num_ports} serial workers distributing across {num_ports} COM ports.")
 
-                for block in self.blocks:
-                    for rack in block.racks:
-                        for module in rack.modules:
-                            json_data = json.dumps(module.get_data())
-                            ser.write(json_data.encode() + b'\n')
+        self.serial_workers = []  # Store worker references
+        com_ports.sort()  # Ensure COM ports are in order (COM1, COM2, etc.)
 
-                            time.sleep(1)
-                            if ser.in_waiting > 0:
-                                response = ser.readline().decode(errors="ignore").strip()
-                                print(f"ESP32 Response: {response}")
-                                self.core.receive_data_from_methods(response)  # Send to Core
+        worker_counter = 0  # To ensure every module gets processed across COM ports
 
+        for block in self.blocks:  # Iterate through each block
+            print(f"Processing Block {block.id}")
 
-        except serial.SerialException as e:
-            print(f"Error communicating with {com_port}: {e}")
+            for rack in block.racks:  # Iterate through racks in the current block
+                print(f"Processing Rack {rack.id} in Block {block.id}")
+
+                for i, module in enumerate(rack.modules):  # Iterate through modules in the current rack
+                    com_index = worker_counter % num_ports  # Use modulo to distribute modules evenly
+                    com_port = com_ports[com_index]  # Assign the COM port based on the index
+
+                    print(f"Assigning Module {module.id} from Block {block.id} to COM{com_port}")
+
+                    # Pass the block, rack, and module to the worker
+                    worker = SerialWorker(f"COM{com_port}", block, rack, module)
+                    worker.response_received.connect(self.core.receive_data_from_methods)
+                    worker.start()
+                    self.serial_workers.append(worker)
+
+                    worker_counter += 1  # Increment the counter to ensure every module is assigned
+
+                    # Debugging output: show each module processed
+                    print(
+                        f"Worker {worker_counter} started for Module {module.id} in Block {block.id}, Rack {rack.id} on COM{com_port}")
 
     def run_simulation(self):
         """Run the full simulation process."""
@@ -158,3 +190,54 @@ class Methods:
         print("Simulation complete.")
 
 
+class SerialWorker(QThread):
+    response_received = Signal(str)  # Signal to send data to UI
+
+    def __init__(self, com_port, block, rack, module):
+        super().__init__()
+        self.com_port = com_port
+        self.block = block
+        self.rack = rack
+        self.module = module
+        self.running = True  # Control flag for stopping safely
+
+    def run(self):
+        """Send data to ESP32 in a thread and update UI in real-time."""
+        try:
+            # Retry logic for port access
+            retry_count = 3
+            while retry_count > 0:
+                try:
+                    with serial.Serial(self.com_port, 115200, timeout=1) as ser:
+                        self.response_received.emit(f"Connected to {self.com_port}")
+
+                        if self.module:
+                            # If module is provided, send its data
+                            module_data = self.module.get_data()
+                            json_data = json.dumps(module_data)  # Convert to JSON string
+                            json.loads(json_data)  # Validate JSON
+                            ser.write(json_data.encode() + b'\n')
+                            print(f"Sent data for Module {self.module.id} to ESP32")
+                            self.response_received.emit(f"Sent data for Module {self.module.id} to ESP32")
+
+                        # Wait for response and handle it
+                        if ser.in_waiting > 0:
+                            response = ser.readline().decode(errors="ignore").strip()
+                            if response:  # Check to avoid emitting empty responses
+                                self.response_received.emit(f"ESP32: {response}")  # Forward valid response
+                        break  # Exit the retry loop on success
+                except serial.SerialException as e:
+                    retry_count -= 1
+                    if retry_count == 0:
+                        self.response_received.emit(f"Serial Error: {e}")
+                    else:
+                        self.response_received.emit(f"Retrying {self.com_port} due to error: {e}")
+                        time.sleep(1)  # Delay before retrying
+        except Exception as e:
+            self.response_received.emit(f"Unexpected Error: {e}")
+
+    def stop(self):
+        """Stop the worker thread."""
+        self.running = False
+        self.quit()
+        self.wait()
