@@ -1,0 +1,168 @@
+#include <ArduinoJson.h>
+#include <Wire.h>
+
+#define NODE_ID 7  // This node's ID
+
+// Task handles for managing FreeRTOS tasks
+TaskHandle_t Task1Handle = NULL;
+TaskHandle_t Task2Handle = NULL;
+
+
+
+String readFromSerial(HardwareSerial &serialPort);
+bool RouteReceivedData(String jsonData);
+
+
+String receivedJsonSerial = "";
+String JSON_NODE_1 ="";
+String error_;
+String JSON_NODE_4 ="";
+String JSON_NODE_7 ="";
+bool NODE_1_DATA_AVAILABLE = false;
+bool NODE_4_DATA_AVAILABLE = false;
+bool NODE_7_DATA_AVAILABLE = false;
+
+bool ping;
+String jsonData;
+String Processed_JSON;
+bool processing = false;
+
+
+void setup() {
+    Serial.begin(115200);
+    Serial1.begin(9600, SERIAL_8N1, 4, 23);  // Communication with Node 4
+
+
+    // Create FreeRTOS tasks
+    xTaskCreatePinnedToCore(listenForNodesTask, "ListenNodes", 4096, NULL, 1, &Task1Handle, 0); // Run on Core 0
+    xTaskCreatePinnedToCore(routeDataTask, "RouteData", 4096, NULL, 1, &Task2Handle, 1); // Run on Core 1
+}
+
+void loop() {
+    // Empty: Tasks handle execution.
+}
+
+
+void listenForNodesTask(void *pvParameters) {
+    while (true) {
+    StaticJsonDocument<200> doc;
+    receivedJsonSerial = readFromSerial(Serial1);
+    Serial2.println();
+    DeserializationError error = deserializeJson(doc, receivedJsonSerial);
+    if (receivedJsonSerial == "")
+    {
+      Serial.println("no data");
+    }
+    else {
+    if (error) {
+        Serial.println("Failed to parse JSON");
+        Serial.println(jsonData);
+    }
+
+
+    int deviceID = doc["deviceID"];
+
+    if (deviceID == 1){
+      JSON_NODE_1 = receivedJsonSerial;
+      Serial.println("Node ID is 1");
+      NODE_1_DATA_AVAILABLE = true;
+    }
+    else if (deviceID ==4){
+      JSON_NODE_4 = receivedJsonSerial;
+      Serial.println("Node ID is 4");
+      NODE_4_DATA_AVAILABLE = true;
+
+    }
+    else if (deviceID ==7){
+    JSON_NODE_7 = receivedJsonSerial;
+    Serial.println("Node ID is 7");
+    NODE_7_DATA_AVAILABLE = true;
+
+    }
+    else {
+      Serial.println("Data does not belong in this row");
+    }
+    
+    }
+
+
+
+    vTaskDelay(250 / portTICK_PERIOD_MS); // Prevent task starvation
+    }
+}
+
+// Task to handle routing local JSON data
+void routeDataTask(void *pvParameters) {
+    while (true) {
+      String new_JSON_NODE_7;
+        if (NODE_4_DATA_AVAILABLE) {
+            
+            RouteReceivedData(JSON_NODE_4);
+            NODE_4_DATA_AVAILABLE = false;
+        }
+        if (NODE_1_DATA_AVAILABLE) {
+            RouteReceivedData(JSON_NODE_1);
+            NODE_1_DATA_AVAILABLE = false;
+        }
+
+        if (NODE_7_DATA_AVAILABLE) {
+            Serial.println("Processing data here");
+            StaticJsonDocument<200> doc;
+            DeserializationError error = deserializeJson(doc, JSON_NODE_7);
+                if (error) {
+                  Serial.println("Failed to parse JSON");
+                  Serial.println(jsonData);
+                  
+                  }
+            new_JSON_NODE_7= ProcessData(doc);
+
+            Serial.println("Processed data");
+            NODE_7_DATA_AVAILABLE = false;
+            RouteReceivedData(new_JSON_NODE_7);
+        }
+
+        vTaskDelay(10 / portTICK_PERIOD_MS); // Process every second
+    }
+}
+
+
+
+
+
+// Function to read from Serial
+String readFromSerial(HardwareSerial &serial) {
+    String receivedData = "";
+    while (serial.available()) {
+        char c = serial.read();
+
+        receivedData += c;
+        delay(2);
+    }
+    receivedData.trim(); // Remove unwanted spaces or newline chars
+    return receivedData;
+}
+
+
+// Function to route received data
+bool RouteReceivedData(String jsonData) {
+    Serial.println("Saved: " + jsonData);
+    return true;
+}
+
+
+
+
+// Function to process data
+String ProcessData(StaticJsonDocument<200>& doc) {
+    doc["Processed"] = "True";
+    error_ = serializeJson(doc, Processed_JSON);
+    
+    if (error_) {
+        Serial.println("Failed to serialize JSON: ");
+        Serial.println(Processed_JSON);
+    }
+    return Processed_JSON;
+   
+
+    }
+
