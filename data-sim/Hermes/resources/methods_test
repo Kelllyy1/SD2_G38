@@ -1,0 +1,41 @@
+from PySide6.QtCore import QThread, Signal
+import serial
+import json
+import time
+
+class SerialWorker(QThread):
+    response_received = Signal(str)  # Signal to send data to UI
+
+    def __init__(self, com_port, modules):
+        super().__init__()
+        self.com_port = com_port
+        self.modules = modules
+        self.running = True  # Control flag
+
+    def run(self):
+        """Send data to ESP32 and emit responses without blocking the UI."""
+        try:
+            with serial.Serial(self.com_port, 115200, timeout=1) as ser:
+                print(f"Connected to {self.com_port}")
+
+                for module in self.modules:
+                    if not self.running:
+                        break  # Stop if requested
+
+                    json_data = json.dumps(module.get_data())
+                    ser.write(json_data.encode() + b'\n')
+
+                    # Wait for response without blocking UI
+                    time.sleep(0.5)
+                    if ser.in_waiting > 0:
+                        response = ser.readline().decode(errors="ignore").strip()
+                        self.response_received.emit(response)  # Emit data to UI
+
+        except serial.SerialException as e:
+            self.response_received.emit(f"Serial Error: {e}")  # Show error in UI
+
+    def stop(self):
+        """Stop the thread safely."""
+        self.running = False
+        self.quit()
+        self.wait()

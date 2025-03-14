@@ -1,0 +1,12 @@
+For the data simulator we needed:
+✅ Power equation
+✅ Number of BESS modules
+✅ COM Ports
+
+Number of BESS gets started by generating the cells
+Once all cells generated
+Weather simulation is run to calculate the power
+Power conversion to voltage used then distributed among the cells
+Faults and behaviors simulated
+Data packaged into JSON
+Sent over COM ports

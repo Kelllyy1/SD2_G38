@@ -1,0 +1,26 @@
+Node ID - what node the module is meant to be processed at
+Node Destination - where the mdoule is heading
+isProcessed - boolean to determine if the node format should be changed (JSON reception from ESP32 will have to change)
+
+-----
+
+if isProcessed: false
+
+                            "id": "B001-RR001-MM004-C010",
+                            "voltage": 2.7,
+                            "current": 1176.3774438447888,
+                            "temperature": 25.0,
+                            "status": "Normal",
+                            "fault": "Overcharge"
+if isProcessed: true
+                            "id": "M001"
+                            "numbercellsgenerated": 4
+                            "numbercellscompromised": 2
+                            "averageCharge":
+                            "averageCurrent":
+                            "averageTemp":
+                            "compromisedCells":
+                                "id": B001-R001-M001-C001
+                                    "fault": "Overcharge"
+                                "id": B001-R001-M001-C002
+                                    "fault": "Overdischarge"

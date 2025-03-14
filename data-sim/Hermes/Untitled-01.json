@@ -1,0 +1,95 @@
+{
+    "blocks": [
+        [
+            [
+                {
+                    "rack_id": "R001",
+                    "module_id": "M001",
+                    "deviceID": 1,
+                    "cells": [
+                        {
+                            "id": "B001-R001-M001-C001",
+                            "voltage": 2.7,
+                            "current": 4.626125416670779,
+                            "temperature": 26.034745744240023,
+                            "status": "Compromised",
+                            "faults": "Over_current"
+                        },
+                        {
+                            "id": "B001-R001-M001-C002",
+                            "voltage": 2.7,
+                            "current": 3.226125597536975,
+                            "temperature": 23.867979833943025,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M001-C003",
+                            "voltage": 2.7,
+                            "current": 2.3994438974427177,
+                            "temperature": 25.703688324377648,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M001-C004",
+                            "voltage": 2.7,
+                            "current": 3.1011488434535335,
+                            "temperature": 24.76436407627797,
+                            "status": "Compromised",
+                            "faults": "Over_current"
+                        },
+                        {
+                            "id": "B001-R001-M001-C005",
+                            "voltage": 2.7,
+                            "current": 4.5031541445707886,
+                            "temperature": 26.88623333729436,
+                            "status": "Compromised",
+                            "faults": "Over_current"
+                        },
+                        {
+                            "id": "B001-R001-M001-C006",
+                            "voltage": 2.7,
+                            "current": 2.129516884771571,
+                            "temperature": 24.909642106816605,
+                            "status": "Compromised",
+                            "faults": "Thermal_runaway"
+                        },
+                        {
+                            "id": "B001-R001-M001-C007",
+                            "voltage": 2.7,
+                            "current": 2.178704322306911,
+                            "temperature": 25.05404729785218,
+                            "status": "Compromised",
+                            "faults": "Over_discharge"
+                        },
+                        {
+                            "id": "B001-R001-M001-C008",
+                            "voltage": 2.7,
+                            "current": 4.750098738837253,
+                            "temperature": 24.556745768111433,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M001-C009",
+                            "voltage": 2.7,
+                            "current": 3.5562257439682865,
+                            "temperature": 24.00004512123612,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M001-C010",
+                            "voltage": 2.7,
+                            "current": 3.905251851849061,
+                            "temperature": 24.666161185680252,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        }
+                    ]
+                }
+            ]
+        ]
+    ]
+}

@@ -1,0 +1,31 @@
+Notes for CDR:
+
+Organization of content needs some work; current structure hard to follow
+
+Add power for the nodes in block diagram for hardware
+
+Move node layout to be right after hardware diagram
+
+Add legend to node layout
+
+Move processing back into node
+
+Use different lines styles to indicate wires, wireless etc.
+
+Add brief text description to add context for comparison tables
+
+Move communication to the end of hardware
+
+Mention the wireless communication that happens from the ESP32 to the cloud
+
+Move dev board to the start of the hardware section
+
+Give table to show the power requirements for the system before the power supply
+
+Name power supply slide "battery"
+
+Move power supply diagram forward
+
+Change hardware that holds PCB to "Schematics" followed by "Layout"
+
+
