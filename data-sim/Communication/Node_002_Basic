@@ -1,0 +1,30 @@
+#include <HardwareSerial.h>
+
+HardwareSerial SerialNode(2); // Use UART2 for communication with Node 1
+
+void setup() {
+    Serial.begin(115200);          // Serial Monitor output
+    SerialNode.begin(115200, SERIAL_8N1, 17, 16); // TX=17, RX=16 for Node 1
+
+    delay(1000); // Ensure Serial is initialized
+}
+
+void loop() {
+    String jsonString = "";
+
+    // Read the incoming data from Node 1
+    while (SerialNode.available() > 0) {
+        char incomingByte = SerialNode.read();
+        jsonString += incomingByte; // Accumulate incoming data
+    }
+
+    if (jsonString.length() > 0) {
+        Serial.print("Received from Node 1: ");
+        Serial.println(jsonString); // Print the received data (JSON)
+
+        // Send a response back to Node 1
+        SerialNode.println("Data processed by Node 2"); // Example response
+    }
+
+    delay(500); // Delay to avoid flooding the serial interface
+}
