@@ -2,35 +2,75 @@
 
 HardwareSerial SerialNode(2); // Use UART2 for Node 2 communication
 
+//This sets up everything, consider it "intialization"; only runs once
 void setup() {
-    Serial.begin(115200);          // Serial Monitor output
-    SerialNode.begin(115200, SERIAL_8N1, 17, 16); // TX=17, RX=16 for Node 2
+    Serial.begin(115200);
+    // TX=17, RX=16 are the communicatons pins for the next node via wires
+    //17 will send
+    //16 will read
+    SerialNode.begin(115200, SERIAL_8N1, 17, 16);
+    // Ensure Serial is initialized; the unit is ms, so this is a one second delay
+    //will help with data integrity but not throughput time
+    delay(1000);
+}
 
-    delay(1000); // Ensure Serial is initialized
+String readSerialData() {
+    //Initializing the jsonString; it basically says the string is "" and the concept is that adding "a" will now make it "a" then adding "b" will make it "ab"
+    //This is called "concatenating" which just means adding characters to a string
+    String jsonString = "";
+    //This is checking for the serial. It says greater than "0", because 0 just means empty. This seems obvious but can become a major issue
+    //when troubleshooting. If you ever have an issue here add a print statement into the loop that says "reached" to make sure that
+    //you are ever reaching into the loop. If not, then the Serial queue is empty.
+    while (Serial.available() > 0) {
+        //This has a major distinction, you have to note that the incoming byte is a char, this will be important when troubleshooting
+        //as errors are most common in this phase. When you get into really tough issues, you are going to want to try printing char by char
+        //but recall that it is simply not a string and the insight will be different. For example, data can corrupt between being a char and a concatenated string.
+        char incomingByte = Serial.read();
+        //The newest char read is being added to the existing string. Again, this is a really important step, you are going to want to check the char with a print
+        //if you have issues here.
+        jsonString += incomingByte;
+    }
+    //You are now returing the jsonString. As this code becomes more complex, returning the string is going to be more important to check on
+    //as the function is always liable to drop info before reaching this point. It is why buffering is so important.
+    return jsonString;
+}
+
+//Now we are forwarding data to the next node. Another point of issue. BEFORE you get here, make sure you run the code a few times to make sure
+//when is sent out is well formed. If it is not, roll back and stop calling this. Instead replace it with a print statement for the previous jsonString that was returned
+//If the data is in good form, then you can focus on only this function. Start the function with a print statement, to make sure it gets good data, again.
+
+//It is passed one variable, const String& jsonString, it is REALLY important to know what this means. This is a read-only variable
+//This means that once the info reaches this function it cannot be appended. This is important, because the only way to "augment" this would be to clone the data
+//then pack a new JSON. **DO NOT** try to change the type of data, as you are likely to accidentally append the data, which will cause a mess of issues.
+//& is always referential, it is related to pointers, though this is not that situation. It is similar to when you read in a String the C way.
+void forwardToNode2(const String& jsonString) {
+    //Makign sure that the JSON string has data. It is possible for the JSON to have nothing, and the program tries to fill in the gaps with garbage.
+    if (jsonString.length() > 0) {
+        //Sending over the data to the string. You might be wondering "then why is it serial print? I thought the monitor did that!" It does! The idea is that
+        //we are printing the data to the next node. Recall that we got this information from an assortment of printing from whichever machine came before it. These are computers,
+        //and tehy communicate through this series of print statements. The same way we send text messages to each other!
+        SerialNode.println(jsonString);
+        //Now we print, on our side, to confirm
+        Serial.println("Forwarded to Node 2: ");
+        //DO NOT mix this up with the SerialNode.println! It is going to be easy to do, but sometimes we think if it prints on this side, it is working
+        //NOTHING has worked until it is printed on your next serial monitor.
+        Serial.println(jsonString);
+
+        //Now we wait for a response. Once you are 100% everything works, you can cut this out - it is really for troubleshooting.
+        if (SerialNode.available()) {
+            //We are sending a JSON string and this is a big point of difference. See, this is saying "when you see a new line, the transmission has ended." This works well for string.
+            //However, a "real" JSON has new lines by nature. Again, it is really important to understand how particular JSON transmission is.
+            String response = SerialNode.readStringUntil('\n');
+            Serial.print("Received from Node 2: ");
+            Serial.println(response);
+        }
+    }
 }
 
 void loop() {
-    String jsonString = "";
-
-    // Read the incoming data from Python until no data is left
-    while (Serial.available() > 0) {
-        char incomingByte = Serial.read();
-        jsonString += incomingByte; // Accumulate incoming data
-    }
-
-    if (jsonString.length() > 0) {
-        // Forward the JSON string to Node 2
-        SerialNode.println(jsonString); // Send to Node 2
-        Serial.println("Forwarded to Node 2: ");
-        Serial.println(jsonString);  // Debugging output
-
-        // Wait for the response from Node 2
-        if (SerialNode.available()) {
-            String response = SerialNode.readStringUntil('\n'); // Read response
-            Serial.print("Received from Node 2: ");
-            Serial.println(response); // Print Node 2's response
-        }
-    }
-
-    delay(500); // Delay to avoid flooding the serial interface
+    //Store what is generated in the readSerialData. This is an important distinction. This is called a "up-down" or "procedural" language if you are in C
+    //This means that the methods are called in order, unlike Java or Python
+    String jsonString = readSerialData();
+    forwardToNode2(jsonString);
+    delay(500); //
 }
