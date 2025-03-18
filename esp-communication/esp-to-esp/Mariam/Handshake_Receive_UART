@@ -1,0 +1,133 @@
+#include <ArduinoJson.h>
+#include <Wire.h>
+#include "SC16IS752.h"
+
+#define NODE_ID 2  // This node's ID
+#define ACK_TIMEOUT 500  // Timeout for acknowledgment (ms)
+
+// Task handles for managing FreeRTOS tasks
+TaskHandle_t Task1Handle = NULL;
+TaskHandle_t Task2Handle = NULL;
+
+bool listenForPingFromSerial(HardwareSerial &serialPort);
+
+String readFromSerial(HardwareSerial &serialPort);
+
+bool RouteReceivedData(String jsonData);
+
+
+String receivedJsonSerial = "";
+bool newDataNode1Available = false;
+bool newDataNode3Available = false;
+bool newDataSerialAvailable = false;
+int lastNodeListened = 0;
+bool ping;
+String jsonData;
+String listen;
+bool processing = false;
+
+// SC16IS752 Extender (Connected via I2C)
+
+
+void setup() {
+    Serial.begin(115200);
+    Serial2.begin(9600, SERIAL_8N1, 16, 17);  // Communication with Node 1
+    Serial.println("hello");
+    
+
+
+    // Create FreeRTOS tasks
+    xTaskCreatePinnedToCore(listenForNodesTask, "ListenNodes", 4096, NULL, 1, &Task1Handle, 0); // Run on Core 0
+    xTaskCreatePinnedToCore(routeDataTask, "RouteData", 4096, NULL, 1, &Task2Handle, 1); // Run on Core 1
+}
+
+void loop() {
+    // Empty: Tasks handle execution.
+}
+
+
+void listenForNodesTask(void *pvParameters) {
+    while (true) {
+
+        ping = listenForPingSerialStandIn();
+        if (ping) {
+            // Serial.println("JSON from Simulator");
+            while (true) {
+            listen = readFromSerial(Serial2);
+            if (listen != "PING" && listen!= "") {
+                Serial.println("did not receive ping, instead received:" + listen);
+                break;  // Exit loop if "PING" stops coming
+            }
+            Serial.println("Still sending" + listen+ " after Available was sent");
+            vTaskDelay(10 / portTICK_PERIOD_MS);  // Yield to FreeRTOS
+            }
+            receivedJsonSerial = listen;
+            Serial.println("received Data (should be JSON) = " + receivedJsonSerial);
+        }
+
+      vTaskDelay(100 / portTICK_PERIOD_MS); // Prevent task starvation
+    }
+}
+
+
+bool listenForPingSerialStandIn() {
+    String listen = "";
+    unsigned long startTime = millis();  
+
+    while (millis() - startTime < ACK_TIMEOUT) {  
+        listen = readFromSerial(Serial2);  
+        listen.trim();  
+        
+        Serial.println("Listening: [" + listen + "]");  
+
+        if (listen == "PING") {
+            Serial.println("Received PING");
+            Serial2.println("Available");  
+            return true;  
+        }
+
+        vTaskDelay(1 / portTICK_PERIOD_MS); 
+    }
+
+    
+    Serial.println("Did not receive PING within timeout.");
+    return false;
+}
+
+
+
+
+
+
+
+// Function to read from Serial
+String readFromSerial(HardwareSerial &serial) {
+    String receivedData = "";
+    while (serial.available()) {
+        char c = serial.read();
+        
+        if (c == '\n' || c == '\r') {
+            break;  // Stop reading at newline or carriage return
+        }
+
+        receivedData += c;
+        delay(2);
+    }
+    receivedData.trim(); // Remove unwanted spaces or newline chars
+    return receivedData;
+}
+
+void routeDataTask(void *pvParameters) {
+    while (true) {
+        // Serial.println("");
+        vTaskDelay(100 / portTICK_PERIOD_MS); // Prevent task starvation
+    }
+}
+
+
+
+
+
+
+
+
