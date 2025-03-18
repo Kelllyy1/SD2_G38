@@ -1,0 +1,121 @@
+#include <ArduinoJson.h>
+#include <Wire.h>
+#include "SC16IS752.h"
+
+#define NODE_ID 2  // This node's ID
+#define ACK_TIMEOUT 500  // Timeout for acknowledgment (ms)
+
+// Task handles for managing FreeRTOS tasks
+TaskHandle_t Task1Handle = NULL;
+TaskHandle_t Task2Handle = NULL;
+
+String CreateJson();
+
+String readFromSerial(HardwareSerial &serialPort);
+
+
+
+String receivedJsonSerial = "";
+int lastNodeListened = 0;
+bool ack;
+String jsonData;
+String DataSend;
+bool processing = false;
+
+// SC16IS752 Extender (Connected via I2C)
+SC16IS752 uartExtender(SC16IS750_PROTOCOL_I2C, SC16IS750_ADDRESS_BB);
+
+void setup() {
+    Serial.begin(115200);
+    Serial2.begin(9600, SERIAL_8N1, 16, 17);  // Communication with Node 1
+    
+
+
+    // Create FreeRTOS tasks
+    xTaskCreatePinnedToCore(listenForNodesTask, "ListenNodes", 4096, NULL, 1, &Task1Handle, 0); // Run on Core 0
+    // xTaskCreatePinnedToCore(routeDataTask, "RouteData", 4096, NULL, 1, &Task2Handle, 1); // Run on Core 1
+}
+
+void loop() {
+    // Empty: Tasks handle execution.
+}
+
+
+void listenForNodesTask(void *pvParameters) {
+    while (true) {
+
+        ack = waitForAck(Serial2);
+        if (ack) {
+            // Serial.println("JSON from Simulator");
+            Serial.println("received ack");
+            DataSend = CreateJson();
+            Serial2.println(DataSend);
+            Serial.println("sent JSON: \n" + DataSend);
+        }
+
+        vTaskDelay(10 / portTICK_PERIOD_MS); // Prevent task starvation
+    }
+}
+
+
+
+String CreateJson() {
+    // Generate local JSON data
+    StaticJsonDocument<200> localJson;
+    localJson["deviceID"] = 4;  
+    localJson["temperature"] = 25.4;  
+    localJson["voltage"] = 3.7;  
+
+    serializeJson(localJson, jsonData);
+    return jsonData;
+
+}
+
+
+
+
+
+
+// Function to read from Serial
+String readFromSerial(HardwareSerial &serial) {
+    String receivedData = "";
+    while (serial.available()) {
+        char c = serial.read();
+        
+        if (c == '\n' || c == '\r') {
+            break;  // Stop reading at newline or carriage return
+        }
+
+        receivedData += c;
+        delay(2);
+    }
+    receivedData.trim(); // Remove unwanted spaces or newline chars
+    return receivedData;
+}
+
+
+
+bool waitForAck(HardwareSerial &serialPort) {
+    
+
+    unsigned long startTime = millis();
+    Serial.println("Sent: PING");
+    while (millis() - startTime < ACK_TIMEOUT) {
+        serialPort.println("PING");
+        delay(50);
+        String receivedData = readFromSerial(serialPort);
+        if (receivedData == "Available") {
+            Serial.println("responded: ");
+            return true;
+        }
+        else {
+          Serial.println("Received Data is : " + receivedData);
+        }
+    }
+    Serial.println("did not respond in time.");
+    return false;
+}
+
+
+
+
