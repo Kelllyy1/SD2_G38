@@ -11,12 +11,7 @@
 #define BAUD_RATE 115200
 #define BAUD_RATE_UART 9600
 
-// FreeRTOS queue handle
-QueueHandle_t dataQueue;
 
-// Task handles (optional for future management)
-TaskHandle_t sendTaskHandle;
-TaskHandle_t processTaskHandle;
 
 //Structure to hold incoming data and where to send it
 struct DataPacket {
