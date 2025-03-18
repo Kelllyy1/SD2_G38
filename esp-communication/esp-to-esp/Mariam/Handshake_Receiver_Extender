@@ -1,0 +1,150 @@
+#include <ArduinoJson.h>
+#include <Wire.h>
+#include "SC16IS752.h"
+
+#define NODE_ID 2  // This node's ID
+#define ACK_TIMEOUT 500  // Timeout for acknowledgment (ms)
+#define CH_A SC16IS752_CHANNEL_A
+
+
+SC16IS752 i2cuart = SC16IS752(SC16IS750_PROTOCOL_I2C,SC16IS750_ADDRESS_BB); 
+
+// Task handles for managing FreeRTOS tasks
+TaskHandle_t Task1Handle = NULL;
+TaskHandle_t Task2Handle = NULL;
+
+bool listenForPingFromSerial(HardwareSerial &serialPort);
+String CreateJson();
+void encodeString(const char *input, uint8_t *output, uint8_t length);
+void WriteFromExtender(uint8_t channel, const char *input);
+String ReadFromExtender(uint8_t channel);
+bool waitForAckExtender(uint8_t channel);
+
+
+
+bool ping;
+String listen;
+String receivedJsonSerial;
+
+// SC16IS752 Extender (Connected via I2C)
+
+
+void setup() {
+    Serial.begin(115200);
+    
+    i2cuart.begin(SC16IS752_DEFAULT_SPEED, SC16IS752_DEFAULT_SPEED); //baudrate setting
+    if (i2cuart.ping()!=1) {
+        Serial.println("Device not found");
+        while(1);
+    } else {
+        Serial.println("Device found");
+    }
+    
+
+
+    // Create FreeRTOS tasks
+    xTaskCreatePinnedToCore(listenForNodesTask, "ListenNodes", 4096, NULL, 1, &Task1Handle, 0); // Run on Core 0
+    xTaskCreatePinnedToCore(routeDataTask, "RouteData", 4096, NULL, 1, &Task2Handle, 1); // Run on Core 1
+}
+
+void loop() {
+    // Empty: Tasks handle execution.
+}
+
+
+void listenForNodesTask(void *pvParameters) {
+    while (true) {
+
+        ping = listenForPingExtenderStandIn();
+        if (ping) {
+            // Serial.println("JSON from Simulator");
+            while (true) {
+            listen = ReadFromExtender(CH_A);
+            if (listen != "PING" && listen!= "") {
+                Serial.println("did not receive ping, instead received:" + listen);
+                break;  // Exit loop if "PING" stops coming
+            }
+            Serial.println("Still sending" + listen+ " after Available was sent");
+            vTaskDelay(10 / portTICK_PERIOD_MS);  // Yield to FreeRTOS
+            }
+            receivedJsonSerial = listen;
+            Serial.println("received Data (should be JSON) = " + receivedJsonSerial);
+        }
+
+      vTaskDelay(100 / portTICK_PERIOD_MS); // Prevent task starvation
+    }
+}
+
+
+bool listenForPingExtenderStandIn() {
+    String listen = "";
+    unsigned long startTime = millis();  
+
+    while (millis() - startTime < ACK_TIMEOUT) {  
+        listen = ReadFromExtender(CH_A);  
+        listen.trim();  
+        
+        Serial.println("Listening: [" + listen + "]");  
+
+        if (listen == "PING") {
+            Serial.println("Received PING");
+            WriteFromExtender(CH_A, "Available");  
+            return true;  
+        }
+
+        vTaskDelay(1 / portTICK_PERIOD_MS); 
+    }
+
+    
+    Serial.println("Did not receive PING within timeout.");
+    return false;
+}
+
+
+
+
+
+
+
+
+void routeDataTask(void *pvParameters) {
+    while (true) {
+        // Serial.println("");
+        vTaskDelay(100 / portTICK_PERIOD_MS); // Prevent task starvation
+    }
+}
+
+void encodeString(const char *input, uint8_t *output, uint8_t length) {
+    for (int i = 0; i < length; i++) {
+        output[i] = (uint8_t)input[i];  // Convert character to ASCII integer
+    }
+}
+
+void WriteFromExtender(uint8_t channel, const char *input) {
+    uint8_t length = strlen(input);
+    uint8_t encoded[length];  
+    encodeString(input, encoded, length);
+    
+    for (int i = 0; i < length; i++) {
+        i2cuart.write(channel, encoded[i]); // Send encoded bytes
+    }
+}
+
+
+String ReadFromExtender(uint8_t channel) {
+    String receivedData = "";
+    while (i2cuart.available(channel)) {
+        char c = i2cuart.read(channel);
+        
+        if (c == '\n' || c == '\r') {
+            break;  // Stop reading at newline or carriage return
+        }
+        
+        receivedData += c;
+        delay(2);
+    }
+    receivedData.trim(); // Remove unwanted spaces or newline chars
+    return receivedData;
+}
+
+
