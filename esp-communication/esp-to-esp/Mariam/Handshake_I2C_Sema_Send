@@ -4,7 +4,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
-#define NODE_ID 2  // This node's ID
+
 #define ACK_TIMEOUT 500  // Timeout for acknowledgment (ms)
 #define CH_A SC16IS752_CHANNEL_A
 #define CH_B SC16IS752_CHANNEL_B
@@ -20,19 +20,21 @@ TaskHandle_t Task2Handle = NULL;
 void encodeString(const char *input, uint8_t *output, uint8_t length);
 void WriteFromExtender(uint8_t channel, const char *input);
 String ReadFromExtender(uint8_t channel);
-bool RouteReceivedData(String jsonData);
-bool listenForPing(uint8_t channel);
+bool waitForAckExtender(uint8_t channel);
+String CreateJson();
+
 
 
 String receivedJsonSerial = "";
 int lastNodeListened = 0;
-bool ping;
+bool ack;
 String jsonData;
-String listen;
+String DataSend;
 bool processing = false;
 
-SC16IS752 i2cuart = SC16IS752(SC16IS750_PROTOCOL_I2C,SC16IS750_ADDRESS_BB); 
 
+
+SC16IS752 i2cuart = SC16IS752(SC16IS750_PROTOCOL_I2C,SC16IS750_ADDRESS_BB); 
 
 void setup() {
     Serial.begin(115200);
@@ -48,107 +50,71 @@ void setup() {
     CH_B_Semaphore = xSemaphoreCreateBinary();
     xSemaphoreGive(CH_A_Semaphore);
     xSemaphoreGive(CH_B_Semaphore);
-    
-
 
     // Create FreeRTOS tasks
     xTaskCreatePinnedToCore(listenForNodesTask, "ListenNodes", 4096, NULL, 1, &Task1Handle, 0); // Run on Core 0
     // xTaskCreatePinnedToCore(routeDataTask, "RouteData", 4096, NULL, 1, &Task2Handle, 1); // Run on Core 1
+    // xTaskCreatePinnedToCore(SendtoNodesTask, "ListenNodes", 4096, NULL, 1, &Task1Handle, 0); // Run on Core 0
+    // xTaskCreatePinnedToCore(ListentoNodesTask, "RouteData", 4096, NULL, 1, &Task2Handle, 1); // Run on Core 1
 }
 
 void loop() {
     // Empty: Tasks handle execution.
 }
 
+
 void listenForNodesTask(void *pvParameters) {
     while (true) {
 
-        uint8_t channel;  
-        String listen = "";
-
-        
-        if (lastNodeListened == 0) {
-            channel = CH_B;  // CH_B
-            lastNodeListened = 1;
-        } else {
-            channel = CH_A;  // CH_A
-            lastNodeListened = 0;
-        }
-
-        
-
-        // Check for ping message on the respective channel
-        ping = listenForPing(channel);  
-        if (ping) {
-            listen = "";
-            unsigned long startTime = millis(); 
-            while (true) {
-                listen = ReadFromExtender(channel);  
-                if (listen != "PING" && listen != "") {
-                    Serial.println("Did not receive PING, instead received: " + listen);
-                    receivedJsonSerial = listen;
-                    break; 
-                }
+      String CH_number;
+      uint8_t channel;
 
                 
-                Serial.println("Still receiving PING after Available was sent from channel " + String(channel));
+      if (lastNodeListened == 0) {
+          channel = CH_B;  // CH
+           CH_number = "CH_B";
+          lastNodeListened = 1;
+      } else {
+          channel = CH_A;  // CH_A
+           CH_number = "CH_A";
+          lastNodeListened = 0;
+      }
+ 
 
-                // Check if the 500 ms timeout has passed
-                if (millis() - startTime >= 500) {
-                    Serial.println("Timeout reached, stopping PING loop.");
-                    break;  // Exit the loop after 500 ms
-                }
-            }
-
-            Serial.println("Received Data (should be JSON) = " + receivedJsonSerial);
-        }
-
-        vTaskDelay(100 / portTICK_PERIOD_MS);
-    }
-}
-
-
-
-
-bool listenForPing(uint8_t channel) {
-    String listen = "";
-    unsigned long startTime = millis();  
-    String channel_name;
-
-    // Identify the channel
-    if (channel == CH_A) {
-        channel_name = "CH_A";
-    } else if (channel == CH_B) {
-        channel_name = "CH_B";
-    } else {
-        return false; // Invalid channel
-    }
-
-    while (millis() - startTime < ACK_TIMEOUT) {  
-        listen = ReadFromExtender(channel);  
-        listen.trim();  
         
-        Serial.println("Listening on " + channel_name + ": [" + listen + "]");  
+      ack = waitForAckExtender(channel);  
+      if (ack) {
+          Serial.println("received ack from " + CH_number);
+          DataSend = CreateJson();
+          WriteFromExtender(channel, DataSend.c_str());  
+          Serial.println(CH_number + "sent JSON: \n" + DataSend);
+      }
 
-        if (listen == "PING") {
-            Serial.println("Received PING on " + channel_name);
-            WriteFromExtender(channel, "Available\n");  
-            return true;  
-        }
 
-        vTaskDelay(1 / portTICK_PERIOD_MS); 
+      vTaskDelay(10 / portTICK_PERIOD_MS);  // Prevent task starvation
     }
+}
 
-    Serial.println("Did not receive PING within timeout from " + channel_name);
-    return false;
+
+
+
+String CreateJson() {
+    // Generate local JSON data
+    StaticJsonDocument<200> localJson;
+    localJson["deviceID"] = 4;  
+    localJson["temperature"] = 25.4;  
+    localJson["voltage"] = 3.7;  
+
+    serializeJson(localJson, jsonData);
+    return jsonData;
+
 }
 
 
 
 
 
-
-
+// Function to read from Serial
 
 
 String ReadFromExtender(uint8_t channel) {
@@ -161,21 +127,17 @@ String ReadFromExtender(uint8_t channel) {
     } else if (channel == CH_B) {
         semaphore = &CH_B_Semaphore;
     } 
-    // Serial.println("read function");
     
     // Take the semaphore before accessing the extender
     if (xSemaphoreTake(*semaphore, portMAX_DELAY) == pdTRUE) {
-        // Serial.println("passed semaphore");
         while (i2cuart.available(channel)) {
-          // Serial.println("passed available");
-            
             char c = i2cuart.read(channel);
             
             if (c == '\n' || c == '\r') {
+                
                 break;  // Stop reading at newline or carriage return
             }
             
-            // Serial.println(c);
             receivedData += c;
             delay(2);
         }
@@ -184,8 +146,46 @@ String ReadFromExtender(uint8_t channel) {
         // Release the semaphore after reading
         xSemaphoreGive(*semaphore);
     }
+    else {
+      Serial.println("semaphore is already taken, did not read");
+    }
     
     return receivedData;
+}
+
+
+
+
+
+bool waitForAckExtender(uint8_t channel) {
+    String CH_NUM;
+    if (channel == CH_A) {
+        CH_NUM = "CH_A";
+    } else if (channel == CH_B) {
+        CH_NUM = "CH_B";
+    } 
+    unsigned long startTime = millis();
+    
+    
+    while (millis() - startTime < ACK_TIMEOUT) {
+
+        Serial.println("Sent: PING to" + CH_NUM);
+    
+        WriteFromExtender(channel, "PING"); // Send "PING" through the extender
+        delay(50);
+        
+        String receivedData = ReadFromExtender(channel);
+        
+        if (receivedData == "Available") {
+            Serial.println("Responded: Available");
+            return true;
+        } else {
+            Serial.println("Received Data: " + receivedData);
+        }
+    }
+    
+    Serial.println("Did not respond in time.");
+    return false;
 }
 
 
@@ -196,20 +196,23 @@ void encodeString(const char *input, uint8_t *output, uint8_t length) {
 }
 
 void WriteFromExtender(uint8_t channel, const char *input) {
+    String CH_NUM;
+    // if (channel == CH_A) {
+    //     CH_NUM = "CH_A";
+    // } else if (channel == CH_B) {
+    //     CH_NUM = "CH_B";
+    // } 
+
+    // char h;
+
     uint8_t length = strlen(input);
     uint8_t encoded[length];  
     encodeString(input, encoded, length);
     
     for (int i = 0; i < length; i++) {
+        // h = char(encoded[i]);
+        // Serial.println("Sending " + String(h) + " to " + CH_NUM);
         i2cuart.write(channel, encoded[i]); // Send encoded bytes
     }
-}
-
-
-
-void routeDataTask(void *pvParameters) {
-    while (true) {
-        // Serial.println("");
-        vTaskDelay(100 / portTICK_PERIOD_MS); // Prevent task starvation
-    }
+    i2cuart.write(channel, '\n');
 }
