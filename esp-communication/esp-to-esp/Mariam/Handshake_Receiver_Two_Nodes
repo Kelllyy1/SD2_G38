@@ -1,0 +1,204 @@
+#include <ArduinoJson.h>
+#include <Wire.h>
+#include "SC16IS752.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+
+#define NODE_ID 2  // This node's ID
+#define ACK_TIMEOUT 500  // Timeout for acknowledgment (ms)
+
+
+SemaphoreHandle_t serial1Semaphore;
+SemaphoreHandle_t serial2Semaphore;
+
+// Task handles for managing FreeRTOS tasks
+TaskHandle_t Task1Handle = NULL;
+TaskHandle_t Task2Handle = NULL;
+
+bool listenForPingFromSerial(HardwareSerial &serialPort);
+
+String readFromSerial(HardwareSerial &serialPort);
+
+bool RouteReceivedData(String jsonData);
+
+
+String receivedJsonSerial = "";
+bool newDataNode1Available = false;
+bool newDataNode3Available = false;
+bool newDataSerialAvailable = false;
+int lastNodeListened = 0;
+bool ping;
+String jsonData;
+String listen;
+bool processing = false;
+
+
+
+
+void setup() {
+    Serial.begin(115200);
+    Serial2.begin(9600, SERIAL_8N1, 16, 17);  
+    Serial1.begin(9600, SERIAL_8N1, 4, 23);  
+
+    serial1Semaphore = xSemaphoreCreateBinary();
+    serial2Semaphore = xSemaphoreCreateBinary();
+    xSemaphoreGive(serial1Semaphore);
+    xSemaphoreGive(serial2Semaphore);
+    
+
+
+    // Create FreeRTOS tasks
+    xTaskCreatePinnedToCore(listenForNodesTask, "ListenNodes", 4096, NULL, 1, &Task1Handle, 0); // Run on Core 0
+    // xTaskCreatePinnedToCore(routeDataTask, "RouteData", 4096, NULL, 1, &Task2Handle, 1); // Run on Core 1
+}
+
+void loop() {
+    // Empty: Tasks handle execution.
+}
+
+void listenForNodesTask(void *pvParameters) {
+    while (true) {
+
+        String serial_number;
+
+        HardwareSerial *serialPort;
+
+        // Alternate between Serial1 and Serial2
+        if (lastNodeListened == 0) {
+            serialPort = &Serial2;
+            serial_number = "serial2";
+            lastNodeListened = 1;
+        } else {
+            serialPort = &Serial1;
+            serial_number = "serial1";
+            lastNodeListened = 0;
+        }
+
+        // Check for ping message
+        ping = listenForPing(*serialPort);
+        if (ping) {
+            listen = "";
+            unsigned long startTime = millis();  // Record the start time
+            while (true) {
+            String listen = readFromSerial(*serialPort);  // Semaphore taken in read function
+            if (listen != "PING" && listen != "") {
+                Serial.println("Did not receive PING, instead received: " + listen);
+                receivedJsonSerial = listen;
+                break;  // Exit the loop if received data is not "PING"
+            }
+
+            // Print status every time a PING is still being received
+            Serial.println("Still receiving PING after Available was sent from " + serial_number);
+
+            // Check if the 500 ms timeout has passed
+            if (millis() - startTime >= 500) {
+                Serial.println("Timeout reached, stopping PING loop.");
+                break;  // Exit the loop after 500 ms
+            }
+
+              
+          }
+
+    
+            Serial.println("Received Data (should be JSON) = " + receivedJsonSerial);
+          }
+
+          vTaskDelay(100 / portTICK_PERIOD_MS);
+  }
+}
+
+
+
+
+bool listenForPing(HardwareSerial &serial) {
+    String listen = "";
+    unsigned long startTime = millis();  
+
+    String serial_number;
+
+    if (&serial == &Serial1) {
+        serial_number = "serial1";
+    } else if (&serial == &Serial2) {
+        serial_number = "serial2";
+    } 
+
+    
+    
+    while (millis() - startTime < ACK_TIMEOUT) {  
+        listen = readFromSerial(serial);  
+        listen.trim();  
+        
+        Serial.println("Listening: [" + listen + "]");  
+
+        if (listen == "PING") {
+            Serial.println("Received PING");
+            serial.println("Available");  
+
+            
+            return true;  
+        }
+
+        vTaskDelay(1 / portTICK_PERIOD_MS); 
+    }
+
+    Serial.println("Did not receive PING within timeout from " + serial_number);
+        
+    
+
+    return false;
+}
+
+
+
+
+
+
+
+
+String readFromSerial(HardwareSerial &serial) {
+    SemaphoreHandle_t *semaphore;
+
+    // Choose the correct semaphore based on the serial port
+    if (&serial == &Serial1) {
+        semaphore = &serial1Semaphore;
+    } else if (&serial == &Serial2) {
+        semaphore = &serial2Semaphore;
+    } else {
+        return "";  
+    }
+
+    String receivedData = "";
+
+    // Take the semaphore before accessing the serial line
+    if (xSemaphoreTake(*semaphore, portMAX_DELAY) == pdTRUE) {
+        while (serial.available()) {
+            char c = serial.read();
+
+            if (c == '\n' || c == '\r') {
+                break;  // Stop reading at newline or carriage return
+            }
+
+            receivedData += c;
+            delay(2);  // Use delay to prevent task starvation
+        }
+        receivedData.trim();  // Remove unwanted spaces or newline chars
+
+        // Release the semaphore after reading
+        xSemaphoreGive(*semaphore);
+    }
+
+    return receivedData;
+}
+
+
+
+void routeDataTask(void *pvParameters) {
+    while (true) {
+        // Serial.println("");
+        vTaskDelay(100 / portTICK_PERIOD_MS); // Prevent task starvation
+    }
+}
+
+
+
+
