@@ -46,13 +46,16 @@ void loop() {
 }
 
 
+
 void listenForNodesTask(void *pvParameters) {
     while (true) {
 
         ping = listenForPingSerialStandIn();
         if (ping) {
             // Serial.println("JSON from Simulator");
-            while (true) {
+            unsigned long startTime = millis();
+ 
+            while (millis() - startTime < ACK_TIMEOUT) {
             listen = readFromSerial(Serial2);
             if (listen != "PING" && listen!= "") {
                 Serial.println("did not receive ping, instead received:" + listen);
