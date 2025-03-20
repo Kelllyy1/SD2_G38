@@ -1,0 +1,28 @@
+#include <Arduino.h>
+
+#define TX2 17  // Pin for Node 2 ESP32 RX
+#define RX2 16  // Pin for Node 2 ESP32 TX
+
+String timmy = "";
+
+void setup() {
+    Serial.begin(115200);   // USB Serial for PC communication
+    Serial2.begin(115200, SERIAL_8N1, RX2, TX2); // Serial2 for Node 2 communication
+
+    Serial.println("ESP32 Node 1 is ready. Waiting for data...");
+}
+
+void loop() {
+    if (Serial.available()) {
+        String receivedMessage = Serial.readStringUntil('\n'); // Read data from Python
+        Serial.print("Received from PC: ");
+        Serial.println(receivedMessage);
+
+        timmy += receivedMessage;
+        Serial.println("Stored Data: " + timmy);
+
+        // Forward to Node 2 via Serial2
+        Serial2.println(receivedMessage);
+        Serial.println("Forwarded to Node 2!");
+    }
+}
