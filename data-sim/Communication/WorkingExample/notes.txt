@@ -1,0 +1,11 @@
+Some notes:
+
+ser = serial.Serial(
+port = com_port,\
+baudrate = baud_rate,\
+parity=serial.PARITY_NONE,\
+stopbits=serial.STOPBITS_ONE,\
+bytesize=serial.EIGHTBITS,\
+timeout=2,\
+dsrdtr=False,\
+rtscts=False)
