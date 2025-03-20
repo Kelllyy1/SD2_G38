@@ -1,0 +1,16 @@
+#include <Arduino.h>
+
+void setup() {
+    Serial.begin(115200);  // USB Serial for monitoring
+    Serial2.begin(115200, SERIAL_8N1, 16, 17); // Serial2 (TX=17, RX=16) for Node 1 communication
+
+    Serial.println("ESP32 Node 2 is ready. Waiting for data...");
+}
+
+void loop() {
+    if (Serial2.available()) {
+        String receivedMessage = Serial2.readStringUntil('\n'); // Read from Node 1 ESP32
+        Serial.print("Received from Node 1: ");
+        Serial.println(receivedMessage);
+    }
+}
