@@ -1,0 +1,363 @@
+#include <ArduinoJson.h>
+#include <Wire.h>
+#include "SC16IS752.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+
+#define NODE_ID 2  // This node's ID
+#define ACK_TIMEOUT 500  // Timeout for acknowledgment (ms)
+
+
+SemaphoreHandle_t serial1Semaphore;
+SemaphoreHandle_t serial2Semaphore;
+
+// Task handles for managing FreeRTOS tasks
+TaskHandle_t Task1Handle = NULL;
+TaskHandle_t Task2Handle = NULL;
+
+bool listenForPing(HardwareSerial *serialPort);
+String WaitForData(HardwareSerial &serial);
+String readFromSerial(HardwareSerial &serialPort);
+bool waitForAck(HardwareSerial *serialPort, SemaphoreHandle_t *semaphore);
+String CreateJson();
+
+
+String receivedJsonSerial = "";
+int lastNodeListened = 0;
+int lastNodeListened_1 = 1;
+bool ping;
+String jsonData;
+String listen;
+bool processing = false;
+bool ack;
+
+
+
+
+void setup() {
+    Serial.begin(115200);
+    Serial2.begin(9600, SERIAL_8N1, 16, 17);  
+    Serial1.begin(9600, SERIAL_8N1, 4, 23);  
+
+    serial1Semaphore = xSemaphoreCreateBinary();
+    serial2Semaphore = xSemaphoreCreateBinary();
+    xSemaphoreGive(serial1Semaphore);
+    xSemaphoreGive(serial2Semaphore);
+    
+
+
+    // Create FreeRTOS tasks
+    xTaskCreatePinnedToCore(listenForNode1Task, "ListenNode1", 4096, NULL, 1, &Task1Handle, 0); // Run on Core 0
+    xTaskCreatePinnedToCore(listenForNode2Task, "ListenNode2", 4096, NULL, 1, &Task2Handle, 0); // Run on Core 0
+    xTaskCreatePinnedToCore(SendToNode1Task, "SendData", 4096, NULL, 1, &Task2Handle, 1); // Run on Core 1
+    xTaskCreatePinnedToCore(SendToNode2Task, "SendData", 4096, NULL, 1, &Task2Handle, 1); // Run on Core 1
+}
+
+void loop() {
+    // Empty: Tasks handle execution.
+}
+
+void listenForNode1Task(void *pvParameters) {
+    while (true) {
+
+
+
+    SemaphoreHandle_t *semaphore;
+
+    String Data;
+
+    String serial_number;
+
+    HardwareSerial *serialPort;
+
+      serialPort = &Serial2;
+      semaphore = &serial2Semaphore;
+      serial_number = "serial2";
+
+    // Check for ping message
+    if (xSemaphoreTake(*semaphore, portMAX_DELAY) == pdTRUE) {    
+          ping = listenForPing(serialPort);
+          if (ping) {
+            
+                Data = WaitForData(*serialPort);
+                Serial.println("Received Data (should be JSON) = " + Data);
+          }
+
+            // Release the semaphore after reading
+            xSemaphoreGive(*semaphore);
+          
+
+
+            vTaskDelay(100 / portTICK_PERIOD_MS);
+        }
+  }
+}
+
+
+void listenForNode2Task(void *pvParameters) {
+    while (true) {
+
+
+
+    SemaphoreHandle_t *semaphore;
+
+    String Data;
+
+    String serial_number;
+
+    HardwareSerial *serialPort;
+
+      serialPort = &Serial1;
+      semaphore = &serial1Semaphore;
+      serial_number = "serial1";
+
+    // Check for ping message
+    if (xSemaphoreTake(*semaphore, portMAX_DELAY) == pdTRUE) {    
+          ping = listenForPing(serialPort);
+          if (ping) {
+            
+                Data = WaitForData(*serialPort);
+                Serial.println("Received Data (should be JSON) = " + Data);
+          }
+
+            // Release the semaphore after reading
+            xSemaphoreGive(*semaphore);
+          
+
+
+            vTaskDelay(100 / portTICK_PERIOD_MS);
+        }
+  }
+}
+
+
+
+void SendToNode1Task(void *pvParameters) {
+    while (true) {
+    
+    String DataSend;
+
+    SemaphoreHandle_t *semaphore;
+
+    String Data;
+
+    String serial_number;
+
+    HardwareSerial *serialPort;
+
+
+      serialPort = &Serial2;
+      semaphore = &serial2Semaphore;
+      serial_number = "serial2";
+    if (xSemaphoreTake(*semaphore, portMAX_DELAY) == pdTRUE) {
+        ack = waitForAck(serialPort, semaphore);
+        if (ack) {
+            
+              // Serial.println("JSON from Simulator");
+              Serial.println("received ack");
+              
+              DataSend = CreateJson();
+              serialPort->println(DataSend);
+              Serial.println("sent JSON: \n" + DataSend);
+        }
+        xSemaphoreGive(*semaphore);
+
+        vTaskDelay(100 / portTICK_PERIOD_MS); // Prevent task starvation
+        }
+  }
+}
+
+
+
+
+void SendToNode2Task(void *pvParameters) {
+    while (true) {
+    
+    String DataSend;
+
+    SemaphoreHandle_t *semaphore;
+
+    String Data;
+
+    String serial_number;
+
+    HardwareSerial *serialPort;
+
+
+      serialPort = &Serial1;
+      semaphore = &serial1Semaphore;
+      serial_number = "serial1";
+    if (xSemaphoreTake(*semaphore, portMAX_DELAY) == pdTRUE) {
+        ack = waitForAck(serialPort, semaphore);
+        if (ack) {
+            
+              // Serial.println("JSON from Simulator");
+              Serial.println("received ack");
+              
+              DataSend = CreateJson();
+              serialPort->println(DataSend);
+              Serial.println("sent JSON: \n" + DataSend);
+        }
+        xSemaphoreGive(*semaphore);
+
+        vTaskDelay(100 / portTICK_PERIOD_MS); // Prevent task starvation
+        }
+  }
+}
+
+String WaitForData(HardwareSerial &serial) {
+
+    String serial_number;
+
+    // Alternate between Serial1 and Serial2
+    if (&serial == &Serial2) {
+        serial_number = "serial2";
+    } else {
+        serial_number = "serial1";
+    }
+
+
+    String listen;
+    listen = "";
+    unsigned long startTime = millis();  // Record the start time
+    while (true) {
+    listen = readFromSerial(serial); 
+    if (listen != "PING" && listen != "") {
+        Serial.println("Did not receive PING, instead received: " + listen + "from " + serial_number);
+        receivedJsonSerial = listen;
+        return receivedJsonSerial;
+    }
+
+    // Print status every time a PING is still being received
+    Serial.println("receiving" + listen + " PING after Available was sent to " + serial_number);
+
+    // Check if the 500 ms timeout has passed
+    if (millis() - startTime >= 500) {
+        Serial.println("Timeout reached, stopping PING loop.");
+        return "no data";
+    }
+
+      
+  }
+
+
+    
+}
+
+bool listenForPing(HardwareSerial *serialPort) {
+    String listen = "";
+    unsigned long startTime = millis();  
+
+    String serial_number;
+
+    if (serialPort == &Serial1) {
+        serial_number = "serial1";
+    } else if (serialPort == &Serial2) {
+        serial_number = "serial2";
+    } 
+
+    
+    
+    while (millis() - startTime < ACK_TIMEOUT) {  
+        listen = readFromSerial(*serialPort);  
+        listen.trim();  
+        
+        Serial.println("Listening for PING from " + serial_number + ": [" + listen + "]");  
+
+        if (listen == "PING") {
+            Serial.println("Received PING");
+            serialPort->println("Available");  
+
+            
+            return true;  
+        }
+
+        vTaskDelay(1 / portTICK_PERIOD_MS); 
+    }
+
+    Serial.println("Did not receive PING within timeout from " + serial_number);
+        
+    
+
+    return false;
+}
+
+
+
+
+
+
+
+
+String readFromSerial(HardwareSerial &serial) {
+
+
+    String receivedData = "";
+
+    // Take the semaphore before accessing the serial line
+    
+    while (serial.available()) {
+        char c = serial.read();
+
+        if (c == '\n' || c == '\r') {
+            break;  // Stop reading at newline or carriage return
+        }
+
+        receivedData += c;
+        delay(2);  // Use delay to prevent task starvation
+    }
+    receivedData.trim();  // Remove unwanted spaces or newline chars
+
+
+    
+
+    return receivedData;
+}
+
+
+String CreateJson() {
+    // Generate local JSON data
+    StaticJsonDocument<200> localJson;
+    localJson["deviceID"] = 4;  
+    localJson["temperature"] = 25.4;  
+    localJson["voltage"] = 3.7;  
+
+    serializeJson(localJson, jsonData);
+    return jsonData;
+
+}
+
+bool waitForAck(HardwareSerial *serialPort, SemaphoreHandle_t *semaphore) {
+
+    String serial_number;
+
+    if (serialPort == &Serial1) {
+        serial_number = "serial1";
+    } else if (serialPort == &Serial2) {
+        serial_number = "serial2";
+    } 
+    
+
+    unsigned long startTime = millis();
+    Serial.println("Sent: PING to " + serial_number);
+    while (millis() - startTime < ACK_TIMEOUT) {
+        serialPort->println("PING");
+        delay(50);
+        String receivedData = readFromSerial(*serialPort);
+        if (receivedData == "Available") {
+            Serial.println(serial_number + "responded with available: ");
+            return true;
+        }
+        else if (receivedData == "PING") {
+          xSemaphoreGive(*semaphore);
+          vTaskDelay(2000 / portTICK_PERIOD_MS);
+          xSemaphoreTake(*semaphore, portMAX_DELAY);
+          
+        }
+        else {
+          Serial.println("Received Data after sending PING (waiitng for avaiable) from : " + serial_number  + receivedData);
+        }
+    }
+    Serial.println(serial_number + "did not respond in time.");
+    return false;
+}
