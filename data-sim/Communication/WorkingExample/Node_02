@@ -1,15 +1,17 @@
 #include <Arduino.h>
 
-void setup() {
-    Serial.begin(115200);  // USB Serial for monitoring
-    Serial2.begin(115200, SERIAL_8N1, 16, 17); // Serial2 (TX=17, RX=16) for Node 1 communication
+#define RX_PIN 16  // Receive pin (Node 1's TX should be connected here)
+#define TX_PIN 17  // Transmit pin (unused in this case)
 
-    Serial.println("ESP32 Node 2 is ready. Waiting for data...");
+void setup() {
+    Serial.begin(115200); // USB Serial for debugging
+    Serial1.begin(115200, SERIAL_8N1, RX_PIN, TX_PIN); // UART for receiving from Node 1
+    Serial.println("ESP32 Node 2 is ready.");
 }
 
 void loop() {
-    if (Serial2.available()) {
-        String receivedMessage = Serial2.readStringUntil('\n'); // Read from Node 1 ESP32
+    if (Serial1.available()) {
+        String receivedMessage = Serial1.readStringUntil('\n'); // Read data from Node 1
         Serial.print("Received from Node 1: ");
         Serial.println(receivedMessage);
     }
