@@ -2,6 +2,7 @@
 From this  b'{"rack_id": "R001", "module_id": "M001", "deviceID": 1, "cells": [{"id": "B001-R001-M001-C001", "voltage": 2.7, "current": 4.579, "temperature": 23.9, "status": "Normal", "faults": "Normal"}, {"id": "B001-R001-M001-C002", "voltage": 2.7, "current": 3.563, "temperature": 25.369, "status": "Compromised", "faults": "Over_current"}, {"id": "B001-R001-M001-C003", "voltage": 2.7, "current": 3.844, "temperature": 25.827, "status": "Normal", "faults": "Normal"}, {"id": "B001-R001-M001-C004", "voltage": 2.7, "current": 2.503, "temperature": 25.546, "status": "Compromised", "faults": "Overheating"}, {"id": "B001-R001-M001-C005", "voltage": 2.7, "current": 4.396, "temperature": 25.392, "status": "Compromised", "faults": "Over_discharge"}, {"id": "B001-R001-M001-C006", "voltage": 2.7, "current": 4.41, "temperature": 24.6, "status": "Normal", "faults": "Normal"}, {"id": "B001-R001-M001-C007", "voltage": 2.7, "current": 4.64, "temperature": 26.906, "status": "Normal", "faults": "Normal"}, {"id": "B001-R001-M001-C008", "voltage": 2.7, "current": 4.711, "temperature": 25.594, "status": "Compromised", "faults": "Over_current"}, {"id": "B001-R001-M001-C009", "voltage": 2.7, "current": 4.122, "temperature": 24.241, "status": "Normal", "faults": "Normal"}, {"id": "B001-R001-M001-C010", "voltage": 2.7, "current": 3.798, "temperature": 24.834, "status": "Normal", "faults": "Normal"}]}\n'
 
 ----
+What eDAQ gets:
 "rack_id": "R001",
     "module_id": "M001",
     "deviceID": 1,
@@ -17,3 +18,25 @@ From this  b'{"rack_id": "R001", "module_id": "M001", "deviceID": 1, "cells": [{
         {"id": "B001-R001-M001-C009", "voltage": 2.7, "current": 4.122, "temperature": 24.241, "status": "Normal", "faults": "Normal"},
         {"id": "B001-R001-M001-C010", "voltage": 2.7, "current": 3.798, "temperature": 24.834, "status": "Normal", "faults": "Normal"}
     ]
+
+----
+
+What Cloud gets:
+"statistics": {
+    "total_cells": 9,
+    "normal_cells": 5,
+    "compromised_cells": 4,
+    "average_current": 4.0753,
+    "average_temperature": 25.215,
+    "fault_counts": {
+      "Normal": 5,
+      "Over_current": 2,
+      "Overheating": 1,
+      "Over_discharge": 1
+    }
+  },
+  "compromised_cells": [
+    {"id": "B001-R001-M001-C002", "voltage": 2.7, "current": 3.563, "temperature": 25.369, "status": "Compromised", "faults": "Over_current"},
+    {"id": "B001-R001-M001-C004", "voltage": 2.7, "current": 2.503, "temperature": 25.546, "status": "Compromised", "faults": "Overheating"},
+    {"id": "B001-R001-M001-C005", "voltage": 2.7, "current": 4.396, "temperature": 25.392, "status": "Compromised", "faults": "Over_discharge"},
+    {"
