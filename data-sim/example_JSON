@@ -39,4 +39,5 @@ What Cloud gets:
     {"id": "B001-R001-M001-C002", "voltage": 2.7, "current": 3.563, "temperature": 25.369, "status": "Compromised", "faults": "Over_current"},
     {"id": "B001-R001-M001-C004", "voltage": 2.7, "current": 2.503, "temperature": 25.546, "status": "Compromised", "faults": "Overheating"},
     {"id": "B001-R001-M001-C005", "voltage": 2.7, "current": 4.396, "temperature": 25.392, "status": "Compromised", "faults": "Over_discharge"},
-    {"
+    {"id": "B001-R001-M001-C008", "voltage": 2.7, "current": 4.711, "temperature": 25.594, "status": "Compromised", "faults": "Over_current"}
+  ]
