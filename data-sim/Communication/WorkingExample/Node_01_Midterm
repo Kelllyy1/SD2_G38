@@ -1,0 +1,202 @@
+#include <ArduinoJson.h>
+#include <Wire.h>
+
+#define NODE_ID 1   // This node's ID
+#define ACK_TIMEOUT 500   // Timeout for acknowledgment (ms)
+#define TX_PIN 17   // Transmit pin for Node 2 (Serial1)
+#define RX_PIN 16   // Receive pin for Node 2 (Serial1)
+
+// Task handles for managing FreeRTOS tasks
+TaskHandle_t Task1Handle = NULL;
+TaskHandle_t Task2Handle = NULL;
+
+String readFromSerial(HardwareSerial &serialPort);
+bool RouteReceivedData(String jsonData);
+
+String receivedJsonSerial = "";
+String JSON_NODE_1 = "";
+String error;
+String JSON_NODE_4 = "";
+String JSON_NODE_7 = "";
+bool NODE_1_DATA_AVAILABLE = false;
+bool NODE_4_DATA_AVAILABLE = false;
+bool NODE_7_DATA_AVAILABLE = false;
+
+bool ping;
+String jsonData;
+String Processed_JSON;
+bool processing = false;
+
+// Stand-in for reading from multiple "files" for testing purposes
+String readFromSerialStandIn() {
+    static const char* data[] = {
+        "{\"deviceID\":1, \"sensorData\":\"abc\"}",
+        "{\"deviceID\":4, \"status\":\"ok\"}",
+        "{\"deviceID\":7, \"value\":123}"
+    };
+    static int index = 0;
+    if (index < sizeof(data) / sizeof(data[0])) {
+        return String(data[index++]);
+    }
+    return ""; // Indicate no more data
+}
+
+
+void setup() {
+    Serial.begin(115200);
+    Serial2.begin(9600, SERIAL_8N1, 16, 17);  // Communication with Node 5
+    Serial1.begin(115200, SERIAL_8N1, RX_PIN, TX_PIN); // UART for Node 2
+
+    Serial.println("ESP32 Node 1 is ready.");
+
+    // Create FreeRTOS tasks
+    xTaskCreatePinnedToCore(listenForNodesTask, "ListenNodes", 4096, NULL, 1, &Task1Handle, 0); // Run on Core 0
+    xTaskCreatePinnedToCore(routeDataTask, "RouteData", 4096, NULL, 1, &Task2Handle, 1); // Run on Core 1
+}
+
+void loop() {
+    // Empty: Tasks handle execution.
+}
+
+void listenForNodesTask(void *pvParameters) {
+    while (true) {
+        StaticJsonDocument<256> doc; // Use a specific size for better memory management
+        receivedJsonSerial = readFromSerial(Serial1); // Read from Serial1 (Node 2)
+        
+        if (receivedJsonSerial.isEmpty()) {
+            vTaskDelay(100 / portTICK_PERIOD_MS); // Small delay if no data
+            continue; // Skip the iteration if no data is available
+        }
+        
+        // Print received data for debugging
+        Serial.print("Received from Node 2: ");
+        Serial.println(receivedJsonSerial);
+
+        // Deserialize the JSON
+        DeserializationError error = deserializeJson(doc, receivedJsonSerial);
+        if (error) {
+            Serial.print("Failed to parse JSON from Node 2: ");
+            Serial.println(receivedJsonSerial);
+            vTaskDelay(1000 / portTICK_PERIOD_MS); // Retry delay
+            continue; // Skip to next loop iteration if JSON is invalid
+        }
+
+        // Check for deviceID and process accordingly
+        if (doc.containsKey("deviceID")) {
+            int deviceID = doc["deviceID"];
+
+            if (deviceID == 1){
+                JSON_NODE_1 = receivedJsonSerial;
+                Serial.println("Node ID is 1");
+                NODE_1_DATA_AVAILABLE = true;
+            }
+            else if (deviceID == 4){
+                JSON_NODE_4 = receivedJsonSerial;
+                Serial.println("Node ID is 4");
+                NODE_4_DATA_AVAILABLE = true;
+            }
+            else if (deviceID == 7){
+                JSON_NODE_7 = receivedJsonSerial;
+                Serial.println("Node ID is 7");
+                NODE_7_DATA_AVAILABLE = true;
+            }
+            else {
+                Serial.println("Data does not belong to Node 1, 4, or 7");
+            }
+        } else {
+            Serial.println("Received JSON does not contain 'deviceID'");
+        }
+
+        vTaskDelay(1000 / portTICK_PERIOD_MS); // Prevent task starvation
+    }
+}
+
+
+// Task to handle routing local JSON data
+void routeDataTask(void *pvParameters) {
+    while (true) {
+        if (NODE_1_DATA_AVAILABLE) {
+            Serial.println("Processing data for Node 1");
+            RouteReceivedData(JSON_NODE_1);
+            NODE_1_DATA_AVAILABLE = false;
+        }
+        if (NODE_4_DATA_AVAILABLE) {
+            Serial.println("Processing data for Node 4");
+            RouteReceivedData(JSON_NODE_4);
+            NODE_4_DATA_AVAILABLE = false;
+        }
+
+        if (NODE_7_DATA_AVAILABLE) {
+            Serial.println("Processing data for Node 7");
+            RouteReceivedData(JSON_NODE_7);
+            NODE_7_DATA_AVAILABLE = false;
+        }
+
+        vTaskDelay(10 / portTICK_PERIOD_MS); // Process frequently
+    }
+}
+
+// Function to read from Serial
+String readFromSerial(HardwareSerial &serial) {
+  String jsonData = "";
+    if (Serial.available()) {
+        String receivedMessage = Serial.readStringUntil('\n'); // Read input from Serial
+        Serial.print("Sending to Node 2: ");
+        Serial.println(receivedMessage);
+        
+        Serial1.println(receivedMessage); // Send message via UART1
+        jsonData = receivedMessage;
+    }
+
+    return jsonData;
+}
+
+// Function to route received data
+bool RouteReceivedData(String jsonData) {
+    String proccessed_data;
+    StaticJsonDocument<512> doc; // Corrected: Allocate enough space for incoming data
+    DeserializationError error = deserializeJson(doc, jsonData);
+
+    if (error) {
+        Serial.println("Failed to parse JSON for routing");
+        Serial.println(jsonData);
+        return false;
+    }
+
+    int deviceID = doc["deviceID"];
+
+    if (deviceID == NODE_ID) {
+        proccessed_data = ProcessData(doc);
+
+        doc.clear();
+
+        DeserializationError error = deserializeJson(doc, proccessed_data);
+
+        if (error) {
+            Serial.println("Failed to parse JSON after processing data");
+            Serial.println(proccessed_data);
+            return false;
+        } else {
+            Serial.println("Processed Data for Node 1");
+            Serial.print("Sending to Node 5: ");
+            Serial.println(proccessed_data);
+            Serial2.println(proccessed_data);
+        }
+    } else {
+        Serial.println("Routing data to Node 5");
+        Serial.print("Sending to Node 5: ");
+        Serial.println(jsonData);
+        Serial2.println(jsonData);
+    }
+
+    return true;  // Indicate success
+}
+
+// Function to process data
+String ProcessData(StaticJsonDocument<512>& doc) {
+    doc["processed"] = true; // Changed to boolean for better JSON
+    Processed_JSON = ""; // Clear the string before serializing
+    serializeJson(doc, Processed_JSON);
+
+    return Processed_JSON;
+}
