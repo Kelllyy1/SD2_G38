@@ -27,6 +27,7 @@ What Cloud gets:
     "normal_cells": 5,
     "compromised_cells": 4,
     "average_current": 4.0753,
+    "average_voltage": 4.0753,
     "average_temperature": 25.215,
     "fault_counts": {
       "Normal": 5,
