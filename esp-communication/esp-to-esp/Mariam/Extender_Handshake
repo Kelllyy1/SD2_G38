@@ -1,0 +1,472 @@
+#include <ArduinoJson.h>
+#include <Wire.h>
+#include "SC16IS752.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+
+#define NODE_ID 2  // This node's ID
+#define ACK_TIMEOUT 500  // Timeout for acknowledgment (ms)
+#define LISTEN_TIMEOUT 500 
+#define CH_A SC16IS752_CHANNEL_A
+#define CH_B SC16IS752_CHANNEL_B
+
+SC16IS752 i2cuart = SC16IS752(SC16IS750_PROTOCOL_I2C,SC16IS750_ADDRESS_BB); 
+
+
+SemaphoreHandle_t serial1Semaphore;
+SemaphoreHandle_t serial2Semaphore;
+SemaphoreHandle_t CH_ASemaphore;
+SemaphoreHandle_t CH_BSemaphore;
+
+// Task handles for managing FreeRTOS tasks
+// TaskHandle_t Task1Handle = NULL;
+// TaskHandle_t Task2Handle = NULL;
+// TaskHandle_t Task3Handle = NULL;
+// TaskHandle_t Task4Handle = NULL;
+// TaskHandle_t Task5Handle = NULL;
+// TaskHandle_t Task6Handle = NULL;
+TaskHandle_t listenTaskNode3Handle = NULL;  
+TaskHandle_t sendTaskNode3Handle = NULL;
+TaskHandle_t listenTaskNode4Handle = NULL;  
+TaskHandle_t sendTaskNode4Handle = NULL;
+
+String ReadFromExtender(uint8_t channel);
+void EncodeString(const char *input, uint8_t *output, uint8_t length);
+void WriteFromExtender(uint8_t channel, const char *input);
+bool WaitForAckExtender(uint8_t channel, SemaphoreHandle_t *semaphore);
+String CreateJson();
+
+
+String receivedJsonSerial = "";
+int lastNodeListened = 0;
+int lastNodeListened_1 = 1;
+bool ping;
+String jsonData;
+String listen;
+bool processing = false;
+bool ack;
+
+
+
+
+void setup() {
+    Serial.begin(115200);
+    Serial2.begin(9600, SERIAL_8N1, 16, 17);  
+    Serial1.begin(9600, SERIAL_8N1, 4, 23);  
+
+    i2cuart.begin(SC16IS752_DEFAULT_SPEED, SC16IS752_DEFAULT_SPEED); 
+
+    if (i2cuart.ping()!=1) {
+        Serial.println("Device not found");
+        while(1);
+    } else {
+        Serial.println("Device found");
+    }
+
+    // serial1Semaphore = xSemaphoreCreateBinary();
+    // serial2Semaphore = xSemaphoreCreateBinary();
+    CH_ASemaphore = xSemaphoreCreateBinary();
+    CH_BSemaphore = xSemaphoreCreateBinary();
+    // xSemaphoreGive(serial1Semaphore);
+    // xSemaphoreGive(serial2Semaphore);
+    xSemaphoreGive(CH_ASemaphore);
+    xSemaphoreGive(CH_BSemaphore);
+    xTaskCreatePinnedToCore(ListenToNode3, "ListenToNode3", 4096, NULL, 1, &listenTaskNode3Handle, 0);
+    
+    xTaskCreatePinnedToCore(SendToNode3, "SendToNode3", 4096, NULL, 1, &sendTaskNode3Handle, 1);
+
+    xTaskCreatePinnedToCore(ListenToNode4, "ListenToNode4", 4096, NULL, 1, &listenTaskNode4Handle, 0);
+    
+    xTaskCreatePinnedToCore(SendToNode4, "SendToNode4", 4096, NULL, 1, &sendTaskNode4Handle, 1);
+    
+
+
+}
+
+
+void ListenToNode3(void *pvParameters) {
+    uint8_t channel = CH_A;
+    String channel_number = "CH_A";
+    SemaphoreHandle_t *semaphore;
+    semaphore = &CH_ASemaphore;
+    String Data;
+
+    while (true) {
+        // Wait indefinitely for semaphore
+        if (xSemaphoreTake(*semaphore, pdMS_TO_TICKS(20)) == pdTRUE) {
+            ping = ListenForPingExtender(channel);
+              if (ping) {
+                
+                Data = WaitForDataExtender(channel);
+                Serial.println("Received Data (should be JSON) from" + channel_number +" = " + Data);
+
+              }
+            xSemaphoreGive(*semaphore);  // Release semaphore
+                UBaseType_t currentListenPriority = uxTaskPriorityGet(listenTaskNode3Handle);  // Get current priority of ListenToNode3
+                UBaseType_t currentSendPriority = uxTaskPriorityGet(sendTaskNode3Handle);    // Get current priority of SendToNode3
+                
+                Serial.print("ListenToNode3 current priority: ");
+                Serial.println(currentListenPriority);
+                Serial.print("SendToNode3 current priority: ");
+                Serial.println(currentSendPriority);
+
+                // Swap the priorities back: Change ListenToNode3 to 1 and SendToNode3 to 2
+                vTaskPrioritySet(listenTaskNode3Handle, 1);  // Set ListenToNode3 priority to 1
+                vTaskPrioritySet(sendTaskNode3Handle, 2);    // Set SendToNode3 priority to 2
+
+                Serial.println("Task priorities swapped back: ListenToNode3 priority changed to 1, SendToNode3 priority changed to 2");
+        }
+        vTaskDelay(10);
+    }
+}
+
+void SendToNode3(void *pvParameters) {
+    uint8_t channel = CH_A;
+    String channel_number = "CH_A";
+
+    SemaphoreHandle_t *semaphore;
+    semaphore = &CH_ASemaphore;
+    String DataSend;
+
+    while (true) {
+        // Wait indefinitely for semaphore
+        // if (xSemaphoreTake(*semaphore, portMAX_DELAY) == pdTRUE) {
+          if (xSemaphoreTake(*semaphore, pdMS_TO_TICKS(20)) == pdTRUE) {
+          ack = WaitForAckExtender(channel, semaphore);
+              if (ack) {
+                  
+                // Serial.println("JSON from Simulator");
+                Serial.println("received ack from" + channel_number);
+                
+                DataSend = CreateJson();
+                WriteFromExtender(channel, DataSend.c_str());
+                Serial.println("sent JSON: \n" + DataSend + " to " + channel_number);
+
+
+
+              }
+            xSemaphoreGive(*semaphore);  // Release semaphore
+                UBaseType_t currentListenPriority = uxTaskPriorityGet(listenTaskNode3Handle);  // Get current priority of ListenToNode3
+                UBaseType_t currentSendPriority = uxTaskPriorityGet(sendTaskNode3Handle);    // Get current priority of SendToNode3
+                
+                Serial.print("ListenToNode3 current priority: ");
+                Serial.println(currentListenPriority);
+                Serial.print("SendToNode3 current priority: ");
+                Serial.println(currentSendPriority);
+
+                // Swap the priorities: Change ListenToNode3 to 2 and SendToNode3 to 1
+                vTaskPrioritySet(listenTaskNode3Handle, 2);  // Set ListenToNode3 priority to 2
+                vTaskPrioritySet(sendTaskNode3Handle, 1);    // Set SendToNode3 priority to 1
+
+                Serial.println("Task priorities swapped: ListenToNode3 priority changed to 2, SendToNode3 priority changed to 1");
+        }
+        vTaskDelay(10);
+    }
+}
+
+
+void ListenToNode4(void *pvParameters) {
+    uint8_t channel = CH_B;
+    String channel_number = "CH_B";
+    SemaphoreHandle_t *semaphore;
+    semaphore = &CH_BSemaphore;
+    String Data;
+
+    while (true) {
+        // Wait indefinitely for semaphore
+        if (xSemaphoreTake(*semaphore, pdMS_TO_TICKS(20)) == pdTRUE) {
+            ping = ListenForPingExtender(channel);
+              if (ping) {
+                
+                Data = WaitForDataExtender(channel);
+                Serial.println("Received Data (should be JSON) from" + channel_number +" = " + Data);
+
+              }
+            xSemaphoreGive(*semaphore);   // Release semaphore
+                UBaseType_t currentListenPriority = uxTaskPriorityGet(listenTaskNode4Handle);  // Get current priority of ListenToNode3
+                UBaseType_t currentSendPriority = uxTaskPriorityGet(sendTaskNode4Handle);    // Get current priority of SendToNode3
+                
+                Serial.print("ListenToNode4 current priority: ");
+                Serial.println(currentListenPriority);
+                Serial.print("SendToNode4 current priority: ");
+                Serial.println(currentSendPriority);
+
+                // Swap the priorities back: Change ListenToNode3 to 1 and SendToNode3 to 2
+                vTaskPrioritySet(listenTaskNode4Handle, 1);  // Set ListenToNode3 priority to 1
+                vTaskPrioritySet(sendTaskNode4Handle, 2);    // Set SendToNode3 priority to 2
+
+                Serial.println("Task priorities swapped back: ListenToNode4 priority changed to 1, SendToNode4 priority changed to 2");
+        }
+        vTaskDelay(10);
+    }
+}
+
+
+void SendToNode4(void *pvParameters) {
+    uint8_t channel = CH_B;
+    String channel_number = "CH_B";
+
+    SemaphoreHandle_t *semaphore;
+    semaphore = &CH_BSemaphore;
+    String DataSend;
+
+    while (true) {
+        // Wait indefinitely for semaphore
+        // if (xSemaphoreTake(*semaphore, portMAX_DELAY) == pdTRUE) {
+          if (xSemaphoreTake(*semaphore, pdMS_TO_TICKS(20)) == pdTRUE) {
+          ack = WaitForAckExtender(channel, semaphore);
+              if (ack) {
+                  
+                // Serial.println("JSON from Simulator");
+                Serial.println("received ack from" + channel_number);
+                
+                DataSend = CreateJson();
+                WriteFromExtender(channel, DataSend.c_str());
+                Serial.println("sent JSON: \n" + DataSend + " to " + channel_number);
+
+
+
+              }
+            xSemaphoreGive(*semaphore);  // Release semaphore
+                UBaseType_t currentListenPriority = uxTaskPriorityGet(listenTaskNode4Handle);  // Get current priority of ListenToNode3
+                UBaseType_t currentSendPriority = uxTaskPriorityGet(sendTaskNode4Handle);    // Get current priority of SendToNode3
+                
+                Serial.print("ListenToNode4 current priority: ");
+                Serial.println(currentListenPriority);
+                Serial.print("SendToNode4 current priority: ");
+                Serial.println(currentSendPriority);
+
+                // Swap the priorities: Change ListenToNode3 to 2 and SendToNode3 to 1
+                vTaskPrioritySet(listenTaskNode4Handle, 2);  // Set ListenToNode3 priority to 2
+                vTaskPrioritySet(sendTaskNode4Handle, 1);    // Set SendToNode3 priority to 1
+
+                Serial.println("Task priorities swapped: ListenToNode4 priority changed to 2, SendToNode4 priority changed to 1");
+        }
+        vTaskDelay(10);
+    }
+}
+
+void loop() {
+};
+
+// void loop() {
+//   while (true){
+//     uint8_t channel;
+//     channel = CH_A;
+//     String Data;
+//     String channel_number;
+//     channel_number = "CH_A";
+//     ping = ListenForPingExtender(channel);
+//       if (ping) {
+        
+//             Data = WaitForDataExtender(channel);
+//             Serial.println("Received Data (should be JSON) from" + channel_number +" = " + Data);
+//       }
+
+
+//     SemaphoreHandle_t *semaphore;
+
+
+//     String DataSend;
+
+//     semaphore = &CH_ASemaphore;
+//     ack = WaitForAckExtender(channel, semaphore);
+//         if (ack) {
+            
+//           // Serial.println("JSON from Simulator");
+//           Serial.println("received ack from" + channel_number);
+          
+//           DataSend = CreateJson();
+//           WriteFromExtender(channel, DataSend.c_str());
+//           Serial.println("sent JSON: \n" + DataSend + " to " + channel_number);
+//         }
+    
+//   }
+// }
+
+
+bool WaitForAckExtender(uint8_t channel, SemaphoreHandle_t *semaphore) {
+
+    String channel_name;
+
+    // Identify the channel
+    if (channel == CH_A) {
+        channel_name = "CH_A";
+    } else if (channel == CH_B) {
+        channel_name = "CH_B";
+    }
+    
+
+    unsigned long startTime = millis();
+    Serial.println("Sent: PING to " + channel_name);
+    while (millis() - startTime < ACK_TIMEOUT) {
+        WriteFromExtender(channel, "PING");
+        delay(50);
+        String receivedData = ReadFromExtender(channel);
+        if (receivedData == "Available") {
+            Serial.println(channel_name + "responded with available: ");
+            return true;
+        }
+        // else if (receivedData == "PING") {
+        //   xSemaphoreGive(*semaphore);
+        //   vTaskDelay(2000 / portTICK_PERIOD_MS);
+        //   xSemaphoreTake(*semaphore, portMAX_DELAY);
+          
+        // }
+        else {
+          Serial.println("Received Data after sending PING (waiitng for avaiable) from : " + channel_name  + receivedData);
+        }
+    }
+    Serial.println(channel_name + "did not respond in time with Available");
+    return false;
+}
+
+
+String WaitForDataExtender(uint8_t channel) {
+
+    String channel_name;
+
+    // Alternate between Serial1 and Serial2
+    if (channel == CH_A) {
+        channel_name = "CH_A";
+    } else if (channel == CH_B) {
+        channel_name = "CH_B";
+    } 
+
+
+    String listen;
+    listen = "";
+    unsigned long startTime = millis();  // Record the start time
+    while (true) {
+    listen = ReadFromExtender(channel); 
+    if (listen != "PING" && listen != "") {
+        Serial.println("Did not receive PING, instead received: " + listen + "from " + channel_name);
+        receivedJsonSerial = listen;
+        return receivedJsonSerial;
+    }
+
+    // Print status every time a PING is still being received
+    Serial.println("receiving" + listen + " PING after Available was sent to " + channel_name);
+
+    // Check if the 500 ms timeout has passed
+    if (millis() - startTime >= 500) {
+        Serial.println("Timeout reached, stopping looking for Available loop.");
+        return "no data";
+    }
+
+      
+  }
+
+
+    
+}
+
+bool ListenForPingExtender(uint8_t channel) {
+    String listen = "";
+    unsigned long startTime = millis();  
+    String channel_name;
+
+    // Identify the channel
+    if (channel == CH_A) {
+        channel_name = "CH_A";
+    } else if (channel == CH_B) {
+        channel_name = "CH_B";
+    } 
+
+    while (millis() - startTime < LISTEN_TIMEOUT) {  
+        listen = ReadFromExtender(channel);  
+        listen.trim();  
+        
+        Serial.println("Listening for Ping " + channel_name + ": [" + listen + "]");  
+
+        if (listen == "PING") {
+            Serial.println("Received PING on " + channel_name);
+            WriteFromExtender(channel, "Available");  
+            return true;  
+        }
+
+        vTaskDelay(1 / portTICK_PERIOD_MS); 
+    }
+
+    Serial.println("Did not receive PING within timeout from " + channel_name);
+    return false;
+}
+
+
+String ReadFromExtender(uint8_t channel) {
+    String receivedData = "";  
+    bool messageStarted = false;
+    unsigned long startTime = millis();  
+
+    // while (millis() - startTime < 2000) { 
+        while (i2cuart.available(channel)) {
+            char c = i2cuart.read(channel);
+            startTime = millis();  
+
+            if (c == '<') { 
+                
+                receivedData = "";  
+                messageStarted = true;
+                continue;  
+            }
+
+            if (messageStarted) {
+                if (c == '>') { 
+                    
+                    return receivedData; 
+                }
+                receivedData += c;  // Append valid characters
+            
+            }
+            delay(2);
+        }
+         
+    // }
+
+    return "";  
+}
+
+
+
+
+void EncodeString(const char *input, uint8_t *output, uint8_t length) {
+    for (int i = 0; i < length; i++) {
+        output[i] = (uint8_t)input[i];  // Convert character to ASCII integer
+    }
+}
+
+
+String CreateJson() {
+    // Generate local JSON data
+    StaticJsonDocument<200> localJson;
+    localJson["deviceID"] = 4;  
+    localJson["temperature"] = 25.4;  
+    localJson["voltage"] = 3.7;  
+
+    serializeJson(localJson, jsonData);
+    return jsonData;
+
+}
+
+
+
+
+void WriteFromExtender(uint8_t channel, const char *input) {
+    uint8_t length = strlen(input);
+    uint8_t encoded[length];  
+    EncodeString(input, encoded, length);
+
+    i2cuart.write(channel, '<');
+
+    for (int i = 0; i < length; i++) {
+        i2cuart.write(channel, encoded[i]); // Send encoded bytes
+    }
+
+    i2cuart.write(channel, '>'); // Send end marker separately
+    delay(5);
+}
+
+
+
+
+
