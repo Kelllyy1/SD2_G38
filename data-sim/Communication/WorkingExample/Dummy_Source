@@ -1,0 +1,80 @@
+import serial
+import time
+import json
+
+# Replace with your actual ESP32 COM port (e.g., "COM3" on Windows or "/dev/ttyUSB0" on Linux/Mac)
+ESP32_PORT = "COM7"
+BAUD_RATE = 115200
+
+# Initialize serial communication without triggering ESP32 reset
+ser = serial.Serial(
+    port=ESP32_PORT,
+    baudrate=BAUD_RATE,
+    timeout=1,
+    dsrdtr=False,  # Prevent ESP32 from resetting
+    rtscts=False
+)
+
+time.sleep(2)  # Allow time for ESP32 to initialize
+
+# Shakespearean message
+message = (
+    "To be, or not to be, that is the question:\n"
+    "Whether 'tis nobler in the mind to suffer\n"
+    "The slings and arrows of outrageous fortune,\n"
+    "Or to take arms against a sea of troubles,\n"
+    "And by opposing end them: to die, to sleep\n"
+    "No more; and by a sleep, to say we end\n"
+    "The heart-ache, and the thousand natural shocks\n"
+    "That Flesh is heir to? 'Tis a consummation\n"
+    "Devoutly to be wished. To die, to sleep,\n"
+    "To sleep, perchance to Dream; aye, there's the rub,\n"
+    "For in that sleep of death, what dreams may come,\n"
+    "When we have shuffled off this mortal coil,\n"
+    "Must give us pause..."
+)
+
+# JSON message
+json_data = {
+    "rack_id": "R001",
+    "module_id": "M001",
+    "deviceID": 1,
+    "cells": [
+        {"id": "B001-R001-M001-C001", "voltage": 2.7, "current": 4.579, "temperature": 23.9, "status": "Normal", "faults": "Normal"},
+        {"id": "B001-R001-M001-C002", "voltage": 2.7, "current": 3.563, "temperature": 25.369, "status": "Compromised", "faults": "Over_current"},
+        {"id": "B001-R001-M001-C003", "voltage": 2.7, "current": 3.844, "temperature": 25.827, "status": "Normal", "faults": "Normal"},
+        {"id": "B001-R001-M001-C004", "voltage": 2.7, "current": 2.503, "temperature": 25.546, "status": "Compromised", "faults": "Overheating"},
+        {"id": "B001-R001-M001-C005", "voltage": 2.7, "current": 4.396, "temperature": 25.392, "status": "Compromised", "faults": "Over_discharge"},
+        {"id": "B001-R001-M001-C006", "voltage": 2.7, "current": 4.41, "temperature": 24.6, "status": "Normal", "faults": "Normal"},
+        {"id": "B001-R001-M001-C007", "voltage": 2.7, "current": 4.64, "temperature": 26.906, "status": "Normal", "faults": "Normal"},
+        {"id": "B001-R001-M001-C008", "voltage": 2.7, "current": 4.711, "temperature": 25.594, "status": "Compromised", "faults": "Over_current"},
+        {"id": "B001-R001-M001-C009", "voltage": 2.7, "current": 4.122, "temperature": 24.241, "status": "Normal", "faults": "Normal"},
+        {"id": "B001-R001-M001-C010", "voltage": 2.7, "current": 3.798, "temperature": 24.834, "status": "Normal", "faults": "Normal"}
+    ]
+}
+
+# Send the JSON string
+json_message = json.dumps(json_data)
+
+# Print the raw message
+print("Raw JSON message:", json_message)
+
+# Send to ESP32
+time.sleep(0.5)  # Short delay between messages
+ser.write(json_message.encode() + b'\n')
+
+print("Sent to ESP32:")
+#print(message)
+#print(json_message)
+
+# Read and print response from ESP32
+try:
+    while True:
+        if ser.in_waiting > 0:
+            response = ser.readline().decode(errors="ignore").strip()
+            print("ESP32:", response)
+except KeyboardInterrupt:
+    print("\nSerial monitoring stopped.")
+
+# Close the serial connection
+ser.close()
