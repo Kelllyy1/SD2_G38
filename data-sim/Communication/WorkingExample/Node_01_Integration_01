@@ -1,0 +1,107 @@
+#include <ArduinoJson.h>
+#include <Wire.h>
+#include "SC16IS752.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include "freertos/queue.h"
+
+#define NODE_ID 1
+#define ACK_TIMEOUT 500
+#define LISTEN_TIMEOUT 500
+#define WAITFORDATA_TIMEOUT 500
+
+SemaphoreHandle_t serial2Semaphore;
+
+// FreeRTOS Queue to send data from one task to another
+QueueHandle_t dataQueue;
+
+// Task handles for managing FreeRTOS tasks
+TaskHandle_t Task1Handle = NULL;
+TaskHandle_t Task2Handle = NULL;
+
+bool ListenForPing(HardwareSerial *serialPort);
+String WaitForData(HardwareSerial &serial);
+String ReadFromSerial(HardwareSerial &serialPort);
+bool WaitForAck(HardwareSerial *serialPort);
+String CreateJson();
+String ReadFromSimulator();
+int RouteData(String json);
+int GetJsonValue(String jsonStr, String key);
+void SendToNode4Task(void *pvParameters);
+void ListenForSimulatorTask(void *pvParameters);
+
+int Send_to_Node_4 = 0;
+String Node_4_Data;
+
+#define TX_PIN 17  // Transmit pin for Node 2
+#define RX_PIN 16  // Receive pin (unused in this case)
+
+void setup() {
+    Serial.begin(115200); // USB Serial (for debugging)
+    Serial1.begin(115200, SERIAL_8N1, RX_PIN, TX_PIN); // UART for Node 2
+    Serial.println("ESP32 Node 1 is ready.");
+
+    Serial.setRxBufferSize(20480);
+    Serial1.setRxBufferSize(20480);
+
+    // Create a FreeRTOS queue
+    dataQueue = xQueueCreate(10, sizeof(String));  // Create a queue with a capacity of 10 strings
+
+    // Create a FreeRTOS task for listening to the simulator
+    xTaskCreate(
+        ListenForSimulatorTask,   // Task function
+        "ListenForSim",           // Task name
+        20480,                     // Stack size (in words)
+        NULL,                     // Task parameters
+        1,                        // Task priority
+        &Task1Handle              // Task handle
+    );
+}
+
+void loop() {
+    // Empty loop, FreeRTOS tasks handle execution.
+    // In the future, if you want to collect data in the main loop, you can do that here.
+}
+
+void ListenForSimulatorTask(void *pvParameters) {
+    while (1) {
+        // Collect data from simulator
+        String check = ReadFromSimulator();
+        
+        if (!check.isEmpty()) {
+            Serial.println("Processed simulator data: " + check);
+            
+            // Send the collected data to the queue
+            if (xQueueSend(dataQueue, &check, portMAX_DELAY) != pdPASS) {
+                Serial.println("Failed to send data to the queue");
+            }
+        }
+        vTaskDelay(pdMS_TO_TICKS(100)); // Small delay to prevent busy looping
+    }
+}
+
+String ReadFromSimulator() {
+    String jsonData = "";
+    if (Serial.available()) {
+        jsonData = Serial.readStringUntil('\n');
+        if (jsonData.length() > 0) {
+            jsonData.trim(); // Remove any potential leading/trailing whitespace or the newline itself
+            Serial.println("Received from simulator: " + jsonData);
+            Serial1.println(jsonData); // Send message via UART1
+        }
+    }
+    return jsonData;
+}
+
+void ProcessDataTask(void *pvParameters) {
+    String receivedData;
+    while (1) {
+        // Wait for data from the queue
+        if (xQueueReceive(dataQueue, &receivedData, portMAX_DELAY) == pdPASS) {
+            // Process the received data
+            Serial.println("Processing data: " + receivedData);
+
+        }
+    }
+}
+
