@@ -9,8 +9,6 @@
 #define LISTEN_TIMEOUT 500
 #define WAITFORDATA_TIMEOUT 500
 
-SemaphoreHandle_t serial2Semaphore;
-
 // Task handles for managing FreeRTOS tasks
 TaskHandle_t Task1Handle = NULL;
 TaskHandle_t Task2Handle = NULL;
@@ -33,9 +31,6 @@ void setup() {
     Serial.begin(115200);
     Serial1.begin(115200, SERIAL_8N1, 16, 17); // UART for Node 2
 
-    serial2Semaphore = xSemaphoreCreateBinary();
-    xSemaphoreGive(serial2Semaphore);
-
     // Create FreeRTOS tasks
     xTaskCreatePinnedToCore(ListenForSimulatorTask, "ListenForSimulatorTask", 4096, NULL, 1, &Task1Handle, 0); // Run on Core 0
 }
@@ -48,11 +43,8 @@ void ListenForSimulatorTask(void *pvParameters) {
     while (true) {
         String json = ReadFromSimulator(); // Read incoming data
         if (json.length() > 0) { // If we received a complete message
-            if (xSemaphoreTake(serial2Semaphore, portMAX_DELAY) == pdTRUE) {
-                Serial.println(json);  // Print the received message
-                Serial1.println(json); // Forward it to UART1
-                xSemaphoreGive(serial2Semaphore);
-            }
+            Serial.println(json);  // Print the received message
+            Serial1.println(json); // Forward it to UART1
         }
         vTaskDelay(20 / portTICK_PERIOD_MS); // Short delay to allow other tasks to run
     }
