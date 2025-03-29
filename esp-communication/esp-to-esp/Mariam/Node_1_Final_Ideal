@@ -106,7 +106,7 @@ void ListenForSimulatorTask(void *pvParameters) {
     int route;
 
     
-    json = CreateJson();
+    json = ReadFromSimulator();
     if(RouteData(json)){
       Node_4_Data = json;
     }
