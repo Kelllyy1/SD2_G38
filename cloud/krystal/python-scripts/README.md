@@ -46,7 +46,7 @@ python module.py
 Create any number of new `Cell` assets. This command will continue from the last number automatically:
 
 ```bash
-python create_cells.py 5
+python Cells.py 5
 ```
 
 This creates 5 new cells and saves their IDs to `cell_ids.txt`.
@@ -56,7 +56,7 @@ This creates 5 new cells and saves their IDs to `cell_ids.txt`.
 Create a new `Module` asset if one doesn't exist, or add new cells to an existing one:
 
 ```bash
-python create_module.py
+python Modules.py
 ```
 
 ---
@@ -67,6 +67,6 @@ python create_module.py
 |--------------------|---------------------------------------------------|
 | `cell.py`          | Creates the `Cell` asset model                    |
 | `module.py`        | Creates the `Module` asset model                  |
-| `create_cells.py`  | Creates new `Cell` assets                         |
-| `create_module.py` | Creates or updates a `Module` asset and links cells |
+| `Cells.py`         | Creates new `Cell` assets                         |
+| `Modules.py`       | Creates or updates a `Module` asset and links cells |
 | `cell_ids.txt`     | Auto-generated list of new Cell asset IDs         |
