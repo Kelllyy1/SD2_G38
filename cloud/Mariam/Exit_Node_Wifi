@@ -1,6 +1,6 @@
 #include <ArduinoJson.h>
 #include <Wire.h>
-#include "SC16IS752.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "secrets.h"
@@ -30,7 +30,8 @@ SemaphoreHandle_t serial1Semaphore;
 SemaphoreHandle_t serial2Semaphore;
 
 
-QueueHandle_t ParseQueue;
+
+QueueHandle_t jsonQueue;
 
 // Task handles for managing FreeRTOS tasks
 TaskHandle_t Task1Handle = NULL;
@@ -58,11 +59,11 @@ void setup() {
     xSemaphoreGive(serial1Semaphore);
     xSemaphoreGive(serial2Semaphore);
     
-    ParseQueue = xQueueCreate(10, sizeof(char *)); 
-    if (ParseQueue == NULL) {
-        Serial.println("ParseQueue creation failed!");
+    jsonQueue = xQueueCreate(10, sizeof(char *)); 
+    if (jsonQueue == NULL) {
+        Serial.println("jsonQueue creation failed!");
     } else {
-        Serial.println("ParseQueue created successfully.");
+        Serial.println("jsonQueue created successfully.");
     }
 
     connectWiFi();
@@ -78,8 +79,8 @@ void setup() {
     client.onMessage(messageHandler);
     // Create FreeRTOS tasks
     xTaskCreatePinnedToCore(listenForNode1Task, "ListenNode1", 4096, NULL, 1, &Task1Handle, 0); // Run on Core 0
-    xTaskCreatePinnedToCore(ParseJsonTask, "Parse", 4096, NULL, 1, &Task3Handle, 0); // Run on Core 0
-    xTaskCreatePinnedToCore(SendToNode9Task, "SendData9", 4096, NULL, 1, &Task2Handle, 1); // Run on Core 1
+    // xTaskCreatePinnedToCore(ParseJsonTask, "Parse", 4096, NULL, 1, &Task3Handle, 0); // Run on Core 0
+    xTaskCreatePinnedToCore(SendToNodesTask, "SendData9", 4096, NULL, 1, &Task2Handle, 1); // Run on Core 1
 }
 
 void loop() {
@@ -130,8 +131,8 @@ void listenForNode1Task(void *pvParameters) {
             continue; // Skip sending if allocation failed
         }
 
-        if (xQueueSend(ParseQueue, &Data, portMAX_DELAY) == pdPASS) {
-            if (uxQueueMessagesWaiting(ParseQueue) == 1) {  // Notify only for first message
+        if (xQueueSend(jsonQueue, &Data, portMAX_DELAY) == pdPASS) {
+            if (uxQueueMessagesWaiting(jsonQueue) == 1) {  // Notify only for first message
                 xTaskNotifyGive(Task3Handle);
             }
         } else {
