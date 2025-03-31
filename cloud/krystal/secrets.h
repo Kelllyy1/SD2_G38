@@ -1,47 +1,101 @@
-// TODO: For the code to connect to AWS, this file has to be configured by adding the WiFi credentials, and the correct certificates
-// Note: It's hard to share this code because AWS logins require MFA, and the certificates are unique to each account
-
 #include <pgmspace.h>
 
 #define SECRET
 #define THINGNAME "esp-connection"
 
-// TODO: Add WiFi credentials and AWS IoT endpoint
-// // Home Connection
-// const char WIFI_SSID[] = "your-ssid-here";
-// const char WIFI_PASSWORD[] = "your-password-here";
-// const char AWS_IOT_ENDPOINT[] = "your-endpoint-here";
+// // Home
+// const char WIFI_SSID[] = "TMOBILE-82D1";
+// const char WIFI_PASSWORD[] = "audition.pager.guru.designate";
+// const char AWS_IOT_ENDPOINT[] = "a3s15ecxo7nqh3-ats.iot.us-east-2.amazonaws.com";
 
-// // UCF Connection
-// const char WIFI_SSID[] = "your-ssid-here";
-// const char WIFI_PASSWORD[] = "your-password-here";
-// const char AWS_IOT_ENDPOINT[] = "your-endpoint-here";
+// // UCF
+// const char WIFI_SSID[] = "UCF_WPA2";
+// const char WIFI_USERNAME[] = "kr667262";   // Enterprise WiFi username
+// const char WIFI_PASSWORD[] = "#C3RT_groot23";
+// const char AWS_IOT_ENDPOINT[] = "a3s15ecxo7nqh3-ats.iot.us-east-2.amazonaws.com";
 
-// Personal Hotspot Connection
-// const char WIFI_SSID[] = "your-ssid-here";
-// const char WIFI_PASSWORD[] = "your-password-here";
-// const char AWS_IOT_ENDPOINT[] = "your-endpoint-here";
+// Personal Hotspot
+const char WIFI_SSID[] = "Me";
+const char WIFI_PASSWORD[] = "EdUcAtIoN.";
+const char AWS_IOT_ENDPOINT[] = "a3s15ecxo7nqh3-ats.iot.us-east-2.amazonaws.com";
 
 
-// TODO: Add AWS IoT certificates
 // Amazon Root CA 1
 static const char AWS_CERT_CA[] PROGMEM = R"EOF(
 -----BEGIN CERTIFICATE-----
-....CA1...data...here.....
+MIIDQTCCAimgAwIBAgITBmyfz5m/jAo54vB4ikPmljZbyjANBgkqhkiG9w0BAQsF
+ADA5MQswCQYDVQQGEwJVUzEPMA0GA1UEChMGQW1hem9uMRkwFwYDVQQDExBBbWF6
+b24gUm9vdCBDQSAxMB4XDTE1MDUyNjAwMDAwMFoXDTM4MDExNzAwMDAwMFowOTEL
+MAkGA1UEBhMCVVMxDzANBgNVBAoTBkFtYXpvbjEZMBcGA1UEAxMQQW1hem9uIFJv
+b3QgQ0EgMTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALJ4gHHKeNXj
+ca9HgFB0fW7Y14h29Jlo91ghYPl0hAEvrAIthtOgQ3pOsqTQNroBvo3bSMgHFzZM
+9O6II8c+6zf1tRn4SWiw3te5djgdYZ6k/oI2peVKVuRF4fn9tBb6dNqcmzU5L/qw
+IFAGbHrQgLKm+a/sRxmPUDgH3KKHOVj4utWp+UhnMJbulHheb4mjUcAwhmahRWa6
+VOujw5H5SNz/0egwLX0tdHA114gk957EWW67c4cX8jJGKLhD+rcdqsq08p8kDi1L
+93FcXmn/6pUCyziKrlA4b9v7LWIbxcceVOF34GfID5yHI9Y/QCB/IIDEgEw+OyQm
+jgSubJrIqg0CAwEAAaNCMEAwDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMC
+AYYwHQYDVR0OBBYEFIQYzIU07LwMlJQuCFmcx7IQTgoIMA0GCSqGSIb3DQEBCwUA
+A4IBAQCY8jdaQZChGsV2USggNiMOruYou6r4lK5IpDB/G/wkjUu0yKGX9rbxenDI
+U5PMCCjjmCXPI6T53iHTfIUJrU6adTrCC2qJeHZERxhlbI1Bjjt/msv0tadQ1wUs
+N+gDS63pYaACbvXy8MWy7Vu33PqUXHeeE6V/Uq2V8viTO96LXFvKWlJbYK8U90vv
+o/ufQJVtMVT8QtPHRh8jrdkPSHCa2XV4cdFyQzR1bldZwgJcJmApzyMZFo6IQ6XU
+5MsI+yMRQ+hDKXJioaldXgjUkK642M4UwtBV8ob2xJNDd2ZhwLnoQdeXeGADbkpy
+rqXRfboQnoZsG4q5WTP468SQvvG5
 -----END CERTIFICATE-----
 )EOF";
 
 // Device Certificate
 static const char AWS_CERT_CRT[] PROGMEM = R"KEY(
 -----BEGIN CERTIFICATE-----
-....certificate...data...here.....
+MIIDWjCCAkKgAwIBAgIVAIfqTAx1/gUgE3EvCVOs027jxRxUMA0GCSqGSIb3DQEB
+CwUAME0xSzBJBgNVBAsMQkFtYXpvbiBXZWIgU2VydmljZXMgTz1BbWF6b24uY29t
+IEluYy4gTD1TZWF0dGxlIFNUPVdhc2hpbmd0b24gQz1VUzAeFw0yNTAxMzEyMDMz
+MDVaFw00OTEyMzEyMzU5NTlaMB4xHDAaBgNVBAMME0FXUyBJb1QgQ2VydGlmaWNh
+dGUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCfuU0mRfCGpRDEfRH9
+qWCnlsw/I6aARMWx3LjWgcdZic0ziOCdC5DFYwzhgh9VdiiV6Iwq5bzm69W1DmA4
+6iW05Hg/uYGckeVP3j6ad13ictlnIxzlLEL/y2mpJ2xj1KTZW3X/EeqJqUjYQlRK
+QKi2bvAMiHSInXjWHBnXZ2Q1ihUG5UsenY0dG1Yya3vXbvn2+LYUy43Nm+7Ps3fu
+AtykOdwsqHUSQ0oj2O6hTpdX/kT4D1Z6B68JefUiP2V/C7UuFhjuAaZDYHHFOSna
+VmCSfgzgBsf1zPlcwdPwEazduJU36/kxWiizBRH7nicdN2tLTjpGPKy5I7wm7ioj
+I9p7AgMBAAGjYDBeMB8GA1UdIwQYMBaAFC14872YsCEk1RzCdfoxMmFGWtJRMB0G
+A1UdDgQWBBRr8jBu0Qi1PDJikfwhZeiNRw4NWzAMBgNVHRMBAf8EAjAAMA4GA1Ud
+DwEB/wQEAwIHgDANBgkqhkiG9w0BAQsFAAOCAQEAJ8iF958a8BexfFQw24hhB28d
+c3Sg/L1tEMgraAM9A+MGLW18vThJXjBYsEEdB5HAwvg9MIaCnS6f4zo3Pgiw7C/8
+B4ZNY4XSnwuzLcgu0/e49Wh6EaOUJGrPfcc36iQqhJGytmoy9Xg4PVR8tXQye7+q
+IJvCGsUnwJUJQjE9tqnnVFY5aq4teHmJErTG2Xc4anfKzfL1jF6bqAMZOfd1hb/V
+b66whASB2sOhrBpcxM3KfpnQVWc/YWuEIv6ASQUi1i2ExGFwv6saIxZrZSmFmwX/
+OKWF/jMa1gFKsLnW/MeajWqXjHah6gHNH8kJJxKi54IpuoIpkDwHLSrFPOQU6Q==
 -----END CERTIFICATE-----
 )KEY";
 
 // Device Private Key
 static const char AWS_CERT_PRIVATE[] PROGMEM = R"KEY(
 -----BEGIN RSA PRIVATE KEY-----
-....private...key...data...here.....
+MIIEpAIBAAKCAQEAn7lNJkXwhqUQxH0R/algp5bMPyOmgETFsdy41oHHWYnNM4jg
+nQuQxWMM4YIfVXYoleiMKuW85uvVtQ5gOOoltOR4P7mBnJHlT94+mndd4nLZZyMc
+5SxC/8tpqSdsY9Sk2Vt1/xHqialI2EJUSkCotm7wDIh0iJ141hwZ12dkNYoVBuVL
+Hp2NHRtWMmt712759vi2FMuNzZvuz7N37gLcpDncLKh1EkNKI9juoU6XV/5E+A9W
+egevCXn1Ij9lfwu1LhYY7gGmQ2BxxTkp2lZgkn4M4AbH9cz5XMHT8BGs3biVN+v5
+MVooswUR+54nHTdrS046RjysuSO8Ju4qIyPaewIDAQABAoIBAQCDA58Z3tKdzzYC
+xkiElnO25AXjYJ3Jpx+2dkOTiF55voP4WrVLfFoi3s2JCJAlLMe7t0WKRmn9zMK+
+Qe2BoeaOC73rH4IGaNH9AmK9l14GSoizheTEwtquMS8ZVkIdXSZfOBuAvzRv+NDM
+uxOi2IjLJBJ5ZVCZYvnkPqafvqo/ExnRYfie6GBcNDDBvM8yx6tUCZap1AmbvQwj
++Lxzzw/1Oj43w7p/Ow0RQ0SP8Qsp7KcF0tP95DhXI4UDN7EDlf10NN11nWsSjW9u
+tbA+TuoCayP6pKJH7na/yR9aPZFYe2eyFpgmv/MhpLICOTnX+BD6xKSASqJvtoFO
+WUoKoFH5AoGBAMs171L1PjybqgqKrmuAjyH7qP9PowvBaPVqjbvV/fT0tHpjEIzI
+3IlzF3UiXIzMh5LxuHAeRN1HjaUfZLGR3nkCtkQJRZCclCH3ZWNrLjfkAWKyp8Ew
+usYFYa3LQZdZZaB4O2t15AhcYbIxLkYuaze6s35ESzyiZmfLBzLwJQm1AoGBAMk3
+X07+3+4N9RHaM1eXyI0ntGlV1GMOd7FhqEX5oRm+gum+Hedxqu0vyjHo8ZkJ4ZBD
+csYRR5ejZfOyni8fXEVTfn33oa9BaLh0751xA2wJQNOBHt23mtpBEy/Y7ZLJGbpr
+XBmkqOCZRXOY1oDLDaEOtpi5mHeuzjOpod1a9TFvAoGAe/8/N8m53lXGHoSdBa/+
+puffKVs4zFWKbCZGshVTz4L6FawZTy7Jk32NFMaQ3sF3AK1Ks+9kafndbqKHWOr/
+a6vB+CYIMsO4iDljvpSKMUSJq+YEAxhu/6INBnV+YpIENzTmXR4ktQ1Z99eWuvBc
+MDdWi3e0yRz3i+IRVH3Au/kCgYBEogB+X21eM6CN8FFm5Tzg+NQOwdnp17t344mU
+JKuQrmzU8aYdlaXptU1QbNZLjxVDMd5qNOaokHFsCFbwV9APTYVtzhN2RedEU46P
+s0apiRZ1jitLER9epqe2wFV4peOCtK/7hzCbO2x3G4C++YOyleQuf8/DsvpeoNO3
+Pxk3PQKBgQCpTcEYcwjHr0KP3MVP14R87P+vPEfj/NjiNbk6gtSQccxrYYKU2CmU
+bbY1WqVFOOSRG4j5HPaoUPNhcaq35TdRIx9TciaMGe1z6n6O8qEALeEBfyWg0JfE
+JJspBRutY80igtsxpueeAektPTfMmVnJStuh6qIecEyMMfMJpkUuxQ==
 -----END RSA PRIVATE KEY-----
 )KEY";
 
