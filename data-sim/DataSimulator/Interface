@@ -1,20 +1,25 @@
+import os
 import sys
 import math
 import serial.tools.list_ports
+from PySide6.QtGraphs import QAbstractSeries
 
-from PySide6.QtGui import QPixmap, QFontDatabase, QAction, QIcon
+from PySide6.QtGui import QPixmap, QFontDatabase, QAction, QIcon, QPainter, QBrush, QColor, QFont
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSizePolicy, QHBoxLayout, QLineEdit, \
-    QRadioButton, QPushButton, QMenu, QMenuBar, QMessageBox, QMainWindow, QStackedWidget, QScrollArea, QPlainTextEdit
+    QRadioButton, QPushButton, QMenu, QMenuBar, QMessageBox, QMainWindow, QStackedWidget, QScrollArea, QPlainTextEdit, \
+    QGraphicsOpacityEffect
 from PySide6.QtCore import QFile, QTextStream, Qt
 from PySide6.QtGui import QIntValidator
+from PySide6.QtCharts import QChart, QChartView, QBarSeries, QBarSet, QBarCategoryAxis, QValueAxis, QCategoryAxis, \
+    QLegend
 
 import matplotlib
-matplotlib.use('Qt5Agg')  # Explicitly use Qt5Agg if needed.
 
+matplotlib.use('Qt5Agg')  # Explicitly use Qt5Agg if needed.
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas  # Use Qt5Agg
 from matplotlib.figure import Figure
 
-from Core import Core
+from Core import Core, MplCanvas
 from Methods import Methods
 
 
@@ -152,6 +157,9 @@ class HermesHome(QWidget):
         self.sidebarButton2.setObjectName("sidebarButton2")
         self.sidebarButton3 = QPushButton("Button3")
         self.sidebarButton3.setObjectName("sidebarButton3")
+        self.sidebarButton1.setVisible(False)
+        self.sidebarButton2.setVisible(False)
+        self.sidebarButton3.setVisible(False)
         self.sidebarCollapse = QPushButton("❰")
         self.sidebarCollapse.setObjectName("collapse")
         self.sidebarSpace = QLabel("")
@@ -216,7 +224,7 @@ class HermesHome(QWidget):
         self.turbineInputs.setObjectName("turbineInputs")
         self.turbineInputsLeft = QWidget()
         self.turbineInputsLeft.setObjectName("turbineInputsLeft")
-        self.turbineInputsLeftNumberTitle = QLabel("Blade Length")
+        self.turbineInputsLeftNumberTitle = QLabel("Blade Length (m)")
         self.turbineInputsLeftNumberTitle.setObjectName("turbineInputsLeftNumberTitle")
         self.turbineInputsLeftNumberInput = QLineEdit()
         # placeholder
@@ -243,7 +251,7 @@ class HermesHome(QWidget):
         self.weatherInputs.setObjectName("weatherInputs")
         self.weatherInputsLeft = QWidget()
         self.weatherInputsLeft.setObjectName("weatherInputsLeft")
-        self.weatherInputsLeftNumberTitle = QLabel("Min. Wind Speed")
+        self.weatherInputsLeftNumberTitle = QLabel("Min. Wind Speed (km)")
         self.weatherInputsLeftNumberTitle.setObjectName("weatherInputsLeftNumberTitle")
         self.weatherInputsLeftNumberInput = QLineEdit()
         # placeholder
@@ -251,7 +259,7 @@ class HermesHome(QWidget):
         self.weatherInputsLeftNumberInput.setObjectName("weatherInputsLeftNumberInput")
         self.weatherInputsRight = QWidget()
         self.weatherInputsRight.setObjectName("weatherInputsRight")
-        self.weatherInputsLeftLocationTitle = QLabel("Max. Wind Speed")
+        self.weatherInputsLeftLocationTitle = QLabel("Max. Wind Speed (km)")
         self.weatherInputsLeftLocationTitle.setObjectName("weatherInputsLeftLocationTitle")
         self.weatherInputsLeftLocationInput = QLineEdit()
         # placeholder
@@ -345,9 +353,9 @@ class HermesHome(QWidget):
         self.sidebarInnards_layout.addWidget(self.sidebarCollapse, stretch=1)
         self.sidebarInnards_layout.addWidget(self.sidebarLogo, stretch=3)
         self.sidebarInnards_layout.addWidget(self.sidebarDescription, stretch=3)
-        self.sidebarInnards_layout.addWidget(self.sidebarButton1, stretch=1, alignment=Qt.AlignCenter)
-        self.sidebarInnards_layout.addWidget(self.sidebarButton2, stretch=1, alignment=Qt.AlignCenter)
-        self.sidebarInnards_layout.addWidget(self.sidebarButton3, stretch=1, alignment=Qt.AlignCenter)
+        # self.sidebarInnards_layout.addWidget(self.sidebarButton1, stretch=1, alignment=Qt.AlignCenter)
+        # self.sidebarInnards_layout.addWidget(self.sidebarButton2, stretch=1, alignment=Qt.AlignCenter)
+        # self.sidebarInnards_layout.addWidget(self.sidebarButton3, stretch=1, alignment=Qt.AlignCenter)
         self.sidebarInnards_layout.addWidget(self.sidebarSpace, stretch=3)
         self.sidebarInnards_layout.setSpacing(0)
         self.sidebarInnards.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -494,6 +502,7 @@ class HermesHome(QWidget):
             energy_coefficient = float(self.turbineInputsLeftLocationInput.text())
             min_speed = float(self.weatherInputsLeftNumberInput.text())
             max_wind_speed = float(self.weatherInputsLeftLocationInput.text())
+            filename = self.interactInput.text()
 
             # Retrieve and validate integer inputs
             try:
@@ -541,6 +550,12 @@ class HermesHome(QWidget):
             if math.isqrt(module) ** 2 != module:
                 raise ValueError("Module must be a perfect square.")
 
+            filepath = "C://Users//Erica//Pictures//Senior Design//Hermes//Hermes_Reloaded//" + filename + ".json"
+            print(filepath)
+            #C:\Users\Erica\Pictures\Senior Design\Hermes\Hermes_Reloaded\Untitled-01.json
+            if os.path.exists(filepath):
+                raise FileExistsError(f"Error: The file '{filename}' already exists. Choose a different name.")
+
             numPorts = int(math.sqrt(module))
             print("Number of ports Home: ", numPorts)
 
@@ -556,6 +571,7 @@ class HermesHome(QWidget):
             validated_data['module'] = module
             validated_data['cell'] = cell
             validated_data['num_turbines'] = num_turbines  # Added field
+            validated_data['filename'] = filename  # Added field
 
             print(validated_data)  # Debugging print statement
             self.core.receive_data(validated_data)  # Send to core
@@ -563,6 +579,13 @@ class HermesHome(QWidget):
             return validated_data  # Return the dictionary if validation passes
 
         except ValueError as e:
+            if "could not convert string to float: ''" in str(e):
+                show_error_popup("Please review the form. Some fields are empty.")
+            else:
+                show_error_popup(str(e))
+            return None  # Return None if validation fails
+
+        except FileExistsError as e:
             if "could not convert string to float: ''" in str(e):
                 show_error_popup("Please review the form. Some fields are empty.")
             else:
@@ -604,6 +627,7 @@ class HermesConfig(QWidget):
         self.setup_layout()
         self.apply_stylesheet()
         self.setup_actions()
+        #self.echo(self.core)
 
     # ---------------------------------- load stylesheet ----------------------------------#
     def load_stylesheet(file_path):
@@ -674,12 +698,16 @@ class HermesConfig(QWidget):
         self.topRight_layout = QVBoxLayout()
         self.bottomRight_layout = QVBoxLayout()
         self.tab_layout = QVBoxLayout()
-        self.box_layout = QHBoxLayout()
+        self.box_layout = QVBoxLayout()
         self.tabBottom_layout = QVBoxLayout()
         self.boxBottom_layout = QVBoxLayout()
         self.leftButtons_layout = QHBoxLayout()
         self.rightButtons_layout = QHBoxLayout()
         self.statusBar_layout = QHBoxLayout()
+        self.box_layout = QVBoxLayout()
+        self.statisticsWindow_layout = QVBoxLayout()
+        self.barGraphWindow_layout = QVBoxLayout()
+        self.container_layout = QVBoxLayout()
 
         content_widget = QWidget()
         content_widget.setObjectName("scrollDetails")
@@ -700,6 +728,9 @@ class HermesConfig(QWidget):
         self.comNumber_fields = []
         chassis_layout.setAlignment(Qt.AlignTop)
         nodePort_layouts = []
+
+        self.numberPorts = len(self.core.com_ports)
+        print("Number of ports detected: ", self.numberPorts)
 
         for i in range(2):  # Change this to any number of rows you want
             nodePort_layout = QHBoxLayout()  # Create a new layout for each row
@@ -727,7 +758,7 @@ class HermesConfig(QWidget):
 
         content_widget.setLayout(chassis_layout)
         scroll_area.setWidget(content_widget)
-        self.box_layout.addWidget(scroll_area, stretch=1)
+        self.box_layout.addWidget(scroll_area, stretch=5)
 
     # ---------------------------------- set-up widgets  ----------------------------------#
 
@@ -742,7 +773,7 @@ class HermesConfig(QWidget):
         self.sidebarLogo = QLabel("H")
         self.sidebarLogo.setObjectName("sidebarLogo")
         self.sidebarDescription = QLabel(
-            "HEYO Generate fully customizable plant and weather configurations to simulate the behavior of a BESS-BMS.")
+            "   Generate fully customizable plant and weather configurations to simulate the behavior of a BESS-BMS.")
         self.sidebarDescription.setObjectName("sidebarDescription")
         self.sidebarButton1 = QPushButton("Save")
         self.sidebarButton1.setObjectName("sidebarButton1")
@@ -750,6 +781,11 @@ class HermesConfig(QWidget):
         self.sidebarButton2.setObjectName("sidebarButton2")
         self.sidebarButton3 = QPushButton("Button3")
         self.sidebarButton3.setObjectName("sidebarButton3")
+
+        self.sidebarButton1.setVisible(False)
+        self.sidebarButton2.setVisible(False)
+        self.sidebarButton3.setVisible(False)
+
         self.sidebarCollapse = QPushButton("❰")
         self.sidebarCollapse.setObjectName("collapse")
         self.sidebarSpace = QLabel("")
@@ -787,6 +823,7 @@ class HermesConfig(QWidget):
 
         self.skipConfig = QPushButton("Skip")
         self.skipConfig.setObjectName("skipConfig")
+        self.skipConfig.clicked.connect(self.skipSimulation)
 
         self.submitConfig = QPushButton("Submit")
         self.submitConfig.setObjectName("submitConfig")
@@ -801,6 +838,7 @@ class HermesConfig(QWidget):
 
         self.resultsProgress = QPushButton("Results")
         self.resultsProgress.setObjectName("resultsProgress")
+        self.resultsProgress.clicked.connect(self.skipSimulation)
 
         # ---- ESP32 echo window ----#
         self.response = QPlainTextEdit()
@@ -822,6 +860,33 @@ class HermesConfig(QWidget):
 
         self.statusBar = QWidget()
         self.statusBar.setObjectName("statusBar")
+
+        self.barGraphWindow = QWidget()
+        self.barGraphWindow.setObjectName("barGraphWindow")
+
+        self.statisticsWindow = QWidget()
+        self.statisticsWindow.setObjectName("statisticsWindow")
+
+        self.tab = QWidget()
+        self.tab.setObjectName("tab")
+        self.box = QWidget()
+        self.box.setObjectName("box")
+
+        self.container = QWidget()
+        self.container.setObjectName("container")
+        self.titleTop = QLabel("Port Configuration")
+        self.titleTop.setObjectName("titleTop")
+        # bar diagram widget
+        self.barDiagram = QLabel("barDiagram")
+        self.barDiagram.setObjectName("barDiagram")
+        # bar diagram legend widget
+        self.barDiagramLegend = QLabel("barDiagramLegend")
+        self.barDiagramLegend.setObjectName("barDiagramLegend")
+        self.titleBottom = QLabel("Trends")
+        self.titleBottom.setObjectName("titleBottom")
+
+        self.scroll_area_statistics = QScrollArea()
+        self.scroll_area_statistics.setWidgetResizable(True)  # Allows resizing content dynamically
 
     # ---------------------------------- set-up layouts  ----------------------------------#
     def setup_layout(self):
@@ -871,7 +936,7 @@ class HermesConfig(QWidget):
         self.rightButtons_layout.addWidget(self.horSpaceProgress, stretch=8)
         self.rightButtons_layout.addWidget(self.resultsProgress, stretch=2)
 
-        self.bottomRight_layout.addWidget(self.rightButtons, stretch=1)
+        # self.bottomRight_layout.addWidget(self.rightButtons, stretch=1)
 
         self.bottomRight.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         self.tab.setLayout(self.tab_layout)
@@ -879,6 +944,7 @@ class HermesConfig(QWidget):
         self.box.setLayout(self.box_layout)
 
         self.tabBottom.setLayout(self.tabBottom_layout)
+        # self.tabBottom_layout.addWidget(self.scroll_area)
         self.tabBottom_layout.addWidget(self.titleBottom, stretch=1)
 
         self.statusBar.setLayout(self.statusBar_layout)
@@ -887,8 +953,8 @@ class HermesConfig(QWidget):
         self.statusBar_layout.addWidget(self.statusUpdate, stretch=1)
 
         self.boxBottom.setLayout(self.boxBottom_layout)
-        self.boxBottom_layout.addWidget(self.response, stretch=10)
-        self.boxBottom_layout.addWidget(self.statusBar, stretch=1)
+        self.box_layout.addWidget(self.response, stretch=5)
+        self.box_layout.addWidget(self.statusBar, stretch=1)
 
         self.boxBottom_layout.setSpacing(0)
 
@@ -897,6 +963,15 @@ class HermesConfig(QWidget):
 
         self.leftButtons.setLayout(self.leftButtons_layout)
         self.rightButtons.setLayout(self.rightButtons_layout)
+
+        self.barGraphWindow.setLayout(self.barGraphWindow_layout)
+        self.boxBottom_layout.addWidget(self.barGraphWindow, stretch=1)
+
+        self.boxBottom.setLayout(self.box_layout)
+        # self.boxBottom_layout.addLayout(self.statisticsWindow_layout)
+
+        self.scroll_area_statistics.setWidget(self.statisticsWindow)
+        self.boxBottom_layout.addLayout(self.statisticsWindow_layout)
 
     def get_available_com_ports(self):
         """Retrieve a list of available COM ports."""
@@ -938,6 +1013,23 @@ class HermesConfig(QWidget):
         print("From the interface:", self.core.config)  # Debug print to ensure config is correct
         self.core.run_simulation()
 
+        self.core.data_ready.connect(self.update_chart)
+        self.core.run_simulation()  # Call the Core method
+        file_path = self.core.config["filename"] + ".json"
+        self.core.process_file(file_path)
+
+        self.skipConfig.setStyleSheet("color: #decdbc; background-color: #f0f0f0; border: 1px solid #decdbc;")
+        self.statusBar.setStyleSheet("color: #decdbc; background-color: #f0f0f0; border: 1px solid #decdbc;")
+        self.submitConfig.setStyleSheet("color: #decdbc; background-color: #f0f0f0; border: 1px solid #decdbc;")
+        #self.topRight.setStyleSheet("color: gray; background-color: lightgray; border: 1px solid gray;")
+
+        self.skipConfig.setEnabled(False)
+        self.statusBar.setEnabled(False)
+        self.submitConfig.setEnabled(False)
+        self.topRight.setEnabled(False)
+
+        self.echo(self.core.response_received)
+
         return com_numbers_text
 
     def show_error_popup(self, message):
@@ -956,12 +1048,25 @@ class HermesConfig(QWidget):
 
     def on_submit_button_clicked(self):
         # Ensure we have a valid parent with QStackedWidget
-        parent = self.parent()
-        if parent:
-            # Switch to the second window (config)
-            parent.setCurrentIndex(1)  # Assuming '1' is the index for the config window
-        else:
-            print("Parent widget not found.")
+
+
+        #self.echo(self.core.receive_data_from_methods(data))
+
+        self.core.data_ready.connect(self.update_chart)
+        self.core.runSimulationWithoutESP()  # Call the Core method
+        file_path = self.core.config["filename"] + ".json"
+        self.core.process_file(file_path)
+
+        self.skipConfig.setStyleSheet("color: #decdbc; background-color: #f0f0f0; border: 1px solid #decdbc;")
+        self.statusBar.setStyleSheet("color: #decdbc; background-color: #f0f0f0; border: 1px solid #decdbc;")
+        self.submitConfig.setStyleSheet("color: #decdbc; background-color: #f0f0f0; border: 1px solid #decdbc;")
+        #self.topRight.setStyleSheet("color: gray; background-color: lightgray; border: 1px solid gray;")
+
+        self.skipConfig.setEnabled(False)
+        self.statusBar.setEnabled(False)
+        self.submitConfig.setEnabled(False)
+        self.topRight.setEnabled(False)
+
 
     def print_input_values(self):
         """Print the values of the input fields to the console."""
@@ -1010,14 +1115,14 @@ class HermesConfig(QWidget):
     def echo(self, data):
         """Appends received data to the response monitor"""
         self.statusUpdate.setStyleSheet("""
-                                        background: qlineargradient(spread:pad,
-      x1:0, y1:0, x2:1, y2:0,
-      stop:0 #ffaa00,
-      stop:1 #ffe53f);
-      color: white;
-      border: 1px solid #ffaa00;
-      padding: 3px;
-    border-radius: 5px;
+          background: qlineargradient(spread:pad,
+          x1:0, y1:0, x2:1, y2:0,
+          stop:0 #ffaa00,
+          stop:1 #ffe53f);
+          color: white;
+          border: 1px solid #ffaa00;
+          padding: 3px;
+          border-radius: 5px;
                                         """)
         self.statusUpdate.setText("Working")
         print(f"Received: {data}")  # Debug print
@@ -1035,372 +1140,207 @@ class HermesConfig(QWidget):
                                                 """)
             self.statusUpdate.setText("Complete")
 
+    def skipSimulation(self):
+        self.core.data_ready.connect(self.update_chart)
+        self.core.runSimulationWithoutESP()  # Call the Core method
+        file_path = self.core.config["filename"] + ".json"
+        self.core.process_file(file_path)
 
-class HermesResults(QWidget):
-    def __init__(self, core):
-        super().__init__()
-        self.core = core
-        self.init_ui()
-        self.load_resources()
-        self.setup_menu()
-        self.create_layouts()
-        self.setup_widgets()
-        self.setup_layout()
-        self.apply_stylesheet()
-        self.setup_actions()
+        effect = QGraphicsOpacityEffect()
+        effect.setOpacity(0.5)  # Adjust transparency (0.0 to 1.0)
 
-    # ---------------------------------- load stylesheet ----------------------------------#
-    def load_stylesheet(file_path):
-        file = QFile(file_path)
-        if not file.open(QFile.ReadOnly):
-            raise Exception(f"Cannot open file: {file_path}")
-        stream = QTextStream(file)
-        stylesheet = stream.readAll()
-        file.close()
-        return stylesheet
+        self.skipConfig.setStyleSheet("color: #decdbc; background-color: #f0f0f0; border: 1px solid #decdbc;")
+        self.statusBar.setStyleSheet("color: #decdbc; background-color: #f0f0f0; border: 0px solid #decdbc;")
+        self.submitConfig.setStyleSheet("color: #decdbc; background-color: #f0f0f0; border: 1px solid #decdbc;")
+        #self.topRight.setStyleSheet("color: gray; background-color: lightgray; border: 1px solid gray;")
 
-    # ---------------------------------- initialize window ----------------------------------#
-    def init_ui(self):
-        """Initializes the user interface."""
-        self.setObjectName("window")
-        self.setWindowTitle(" Hermes")
-        self.resize(1200, 600)
+        self.skipConfig.setEnabled(False)
+        self.statusBar.setEnabled(False)
+        self.submitConfig.setEnabled(False)
+        self.topRight.setEnabled(False)
 
-    # ---------------------------------- load resources  ----------------------------------#
-    def load_resources(self):
-        """Loads resources like icons and fonts."""
-        app = QApplication.instance()
-        app.setWindowIcon(QIcon("C:/Users/Erica/Pictures/Senior Design/Hermes/Hermes/resources/images/Logo.ico"))
-        QFontDatabase.addApplicationFont(
-            "C:/Users/Erica/Pictures/Senior Design/Hermes/Hermes/resources/images/Font_005.ttf")
-        QFontDatabase.addApplicationFont(
-            "C:/Users/Erica/Pictures/Senior Design/Hermes/Hermes/resources/images/LEMONMILK-Medium.otf")
+        # self.parent().setCurrentIndex(2)  # Switch to the second window (config)
 
-    def apply_stylesheet(self):
-        """Applies the stylesheet to the application."""
-        app = QApplication.instance()
-        stylesheet = self.load_stylesheet("resources\\style_test_001.qss")
-        app.setStyleSheet(stylesheet)
+    def setup_chart(self):
+        """Sets up the QtCharts bar chart for visualization."""
+        self.categories = ["Overcharge", "Overdischarged", "Overcurrent", "Overheating", "Thermal Runaway"]
 
-    # ---------------------------------- load navbar  ----------------------------------#
-    def setup_menu(self):
-        """Sets up the menu bar."""
-        self.menu_bar = QMenuBar()
-        self.menu_bar.setObjectName("menu")
-        file_menu = QMenu("File", self.menu_bar)
-        self.menu_bar.addMenu(file_menu)
+        # Initialize an empty bar series
+        self.bar_series = QBarSeries()
 
-        new_action = QAction("New", self)
-        open_action = QAction("Open", self)
-        save_action = QAction("Save", self)
-        exit_action = QAction("Exit", self)
-        exit_action.triggered.connect(QApplication.instance().quit)
+        # Create the chart
+        self.chart = QChart()
+        self.chart.addSeries(self.bar_series)
+        self.chart.setTitle("BESS Fault Analysis")
+        self.chart.setAnimationOptions(QChart.SeriesAnimations)
 
-        file_menu.addAction(new_action)
-        file_menu.addAction(open_action)
-        file_menu.addAction(save_action)
-        file_menu.addSeparator()
-        file_menu.addAction(exit_action)
+        # X-Axis (categories)
+        self.axisX = QBarCategoryAxis()
+        self.axisX.append(self.categories)
+        self.chart.addAxis(self.axisX, Qt.AlignBottom)
+        self.bar_series.attachAxis(self.axisX)
 
-        self.menu_bar.addMenu(QMenu("Edit", self.menu_bar))
-        self.menu_bar.addMenu(QMenu("View", self.menu_bar))
-        self.menu_bar.addMenu(QMenu("Help", self.menu_bar))
+        # Y-Axis (values)
+        self.axisY = QValueAxis()
+        # self.axisY.setRange(0, 100)  # Default range (can be updated dynamically)
+        self.axisY.setTickInterval(1)
+        self.chart.addAxis(self.axisY, Qt.AlignLeft)
+        self.bar_series.attachAxis(self.axisY)
 
-    # ---------------------------------- create layouts  ----------------------------------#
-    def create_layouts(self):
-        """Creates all the layouts used in the application."""
-        self.window_home_layout = QVBoxLayout()
-        self.main_content_layout = QHBoxLayout()
-        self.left_layout = QHBoxLayout()
-        self.sidebar_layout = QVBoxLayout()
-        self.sidebarInnards_layout = QVBoxLayout()
-        self.right_layout = QHBoxLayout()
-        self.topRight_layout = QVBoxLayout()
-        self.bottomRight_layout = QVBoxLayout()
-        self.tab_layout = QVBoxLayout()
-        self.box_layout = QHBoxLayout()
-        self.windChart_layout = QVBoxLayout()
-        self.windChartBottom_layout = QHBoxLayout()
-        self.tabBottom_layout = QVBoxLayout()
-        self.boxBottom_layout = QHBoxLayout()
-        self.leftButtons_layout = QHBoxLayout()
-        self.rightButtons_layout = QHBoxLayout()
-        self.container_layout = QVBoxLayout()
-        self.weatherWindow_layout = QVBoxLayout()
+        # Create a chart view
+        self.chart_view = QChartView(self.chart)
+        self.chart_view.setObjectName("barChart")
+        self.chart.setBackgroundBrush(QBrush(QColor(0, 255, 255, 0)))  # Set the background color
 
-    # ---------------------------------- set-up widgets  ----------------------------------#
+        # Get the chart's legend
+        legend = self.chart.legend()
 
-    def setup_widgets(self):
-        """Sets up all the widgets used in the application."""
-        self.left = QWidget()
-        self.left.setObjectName("left")
-        self.sidebar = QWidget()
-        self.sidebar.setObjectName("sidebar")
-        self.sidebarInnards = QWidget()
-        self.sidebarInnards.setObjectName("sidebarInnards")
-        self.sidebarLogo = QLabel("H")
-        self.sidebarLogo.setObjectName("sidebarLogo")
-        self.sidebarDescription = QLabel(
-            "HEYO Generate fully customizable plant and weather configurations to simulate the behavior of a BESS-BMS.")
-        self.sidebarDescription.setObjectName("sidebarDescription")
-        self.sidebarButton1 = QPushButton("Save")
-        self.sidebarButton1.setObjectName("sidebarButton1")
-        self.sidebarButton2 = QPushButton("Button2")
-        self.sidebarButton2.setObjectName("sidebarButton2")
-        self.sidebarButton3 = QPushButton("Button3")
-        self.sidebarButton3.setObjectName("sidebarButton3")
-        self.sidebarCollapse = QPushButton("❰")
-        self.sidebarCollapse.setObjectName("collapse")
-        self.sidebarSpace = QLabel("")
-        self.sidebarSpace.setObjectName("sidebarSpace")
-        self.right = QWidget()
-        self.right.setObjectName("right")
-        self.topRight = QWidget()
-        self.topRight.setObjectName("topRight")
-        self.bottomRight = QWidget()
-        self.bottomRight.setObjectName("bottomRight")
+        # Set properties for the legend (adjustments to show and style it)
+        legend.setVisible(True)  # Show the legend
 
-        self.weatherWindow = QWidget()
-        self.weatherWindow.setObjectName("bottomRight")
+        legend.setAlignment(Qt.AlignRight | Qt.AlignBottom)  # Adjust alignment as needed
+        legend.setWrap(True)  # Enable wrapping
 
-        self.tab = QWidget()
-        self.tab.setObjectName("tab")
-        self.box = QWidget()
-        self.box.setObjectName("box")
+        legend.setFont(QFont("Arial", 10))  # Set font
 
-        self.tabBottom = QWidget()
-        self.tabBottom.setObjectName("tabBottom")
+        # Customize legend background color
+        legend.setBrush(QBrush(QColor(255, 255, 255, 100)))  # Optional: Set background color for the legend
 
-        self.boxBottom = QWidget()
-        self.boxBottom.setObjectName("boxBottom")
+        # Set render hint for better appearance
+        self.chart_view.setRenderHint(QPainter.Antialiasing)
 
-        self.tabRight= QWidget()
-        self.tabRight.setObjectName("tabBottom")
-        self.boxRight = QWidget()
-        self.boxRight.setObjectName("boxBottom")
+        # Add the chart view to your layout
+        self.barGraphWindow_layout.addWidget(self.chart_view, stretch=3)
+        self.barGraphWindow_layout.addWidget(self.barDiagramLegend, stretch=1)
 
-        self.container = QWidget()
-        self.container.setObjectName("container")
+    def update_chart(self):
+        # Define a color palette for each fault type
+        self.fault_colors = [
+            QColor(255, 99, 132),  # Overcharge - Red
+            QColor(54, 162, 235),  # Overdischarge - Blue
+            QColor(255, 206, 86),  # Overcurrent - Yellow
+            QColor(75, 192, 192),  # Overheating - Teal
+            QColor(153, 102, 255)  # Thermal Runaway - Purple
+        ]
 
-        self.titleTop = QLabel("Trends")
-        self.titleTop.setObjectName("titleTop")
+        # Ensure data is up-to-date
+        self.category_labels = self.core.fault_types
+        self.new_data = self.core.fault_counts_list
 
-        self.titleBottom = QLabel("Statistics")
-        self.titleBottom.setObjectName("titleBottom")
+        if not self.new_data:
+            print("Error: No data to update!")
+            return
 
-        self.windChartTitle= QLabel("Weather")
-        self.windChartTitle.setObjectName("windChartTitle")
+        # Create bar sets and series
+        series = QBarSeries()
+        for i, category in enumerate(self.category_labels):
+            self.bar_set = QBarSet(category)
+            self.bar_set.append(self.new_data[i])
+            self.bar_set.setBrush(self.fault_colors[i])  # Set color for each bar
+            legend_label = f"{category}: {self.new_data[i]}"
+            self.bar_set.setLabel(legend_label)  # Set the label for legend
+            series.append(self.bar_set)
 
-        self.windChart = QWidget()
-        self.windChart.setObjectName("windChart")
+        # Create chart and add series
+        self.chart = QChart()
+        self.chart.addSeries(series)
+        # self.chart.createDefaultAxes()
+        # self.chart.axes(Qt.Orientation.Horizontal)[0].setVisible(False)
+        self.chart.setTitle("Fault Distribution")
 
-        self.windChartBox= QWidget()
-        self.windChartBox.setObjectName("windChartBox")
+        # After creating the chart
+        self.axisY = QValueAxis()
+        max_value = max([0] + self.new_data)
 
-        self.window_home_layout = QVBoxLayout()
+        self.axisY.setRange(0, max(10, max_value + 5))  # Ensure padding for visibility
+        self.axisY.setTickInterval(1)  # Force ticks to appear every 1 unit
+        self.axisY.setLabelFormat("%d")  # Ensure integer labels
 
-        # ---- centering icons ---#
-        self.sidebarLogo.setAlignment(Qt.AlignCenter)
+        self.chart.addAxis(self.axisY, Qt.AlignLeft)
+        series.attachAxis(self.axisY)  # Attach the axis to the series
 
+        # self.axisY = QValueAxis()
+        # max_value = max([0] + self.new_data)
+        # self.axisY.setRange(0, max(10, max_value + 5))  # Ensure padding for better visibility
+        #
+        # self.bar_series.attachAxis(self.axisY)
 
-    # ---------------------------------- set-up layouts  ----------------------------------#
-    def setup_layout(self):
-        """Sets up the layouts for all widgets."""
-        self.setLayout(self.window_home_layout)
-        self.window_home_layout.addWidget(self.menu_bar)
-        self.main_content_layout.addWidget(self.left, stretch=1)
-        self.main_content_layout.addWidget(self.right, stretch=4)
-        self.main_content_layout.setAlignment(Qt.AlignCenter)
-        self.window_home_layout.addLayout(self.main_content_layout)
-        self.left.setLayout(self.left_layout)
-        self.left_layout.addWidget(self.sidebar, stretch=1)
-        self.sidebar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.sidebar.setLayout(self.sidebar_layout)
-        self.sidebar_layout.setAlignment(Qt.AlignCenter)
-        self.sidebar_layout.addWidget(self.sidebarInnards, stretch=1)
-        self.sidebarInnards.setLayout(self.sidebarInnards_layout)
-        self.sidebarInnards_layout.setAlignment(Qt.AlignCenter)
-        self.sidebarInnards_layout.addWidget(self.sidebarCollapse, stretch=1)
-        self.sidebarInnards_layout.addWidget(self.sidebarLogo, stretch=3)
-        self.sidebarInnards_layout.addWidget(self.sidebarDescription, stretch=3)
-        self.sidebarInnards_layout.addWidget(self.sidebarButton1, stretch=1, alignment=Qt.AlignCenter)
-        self.sidebarInnards_layout.addWidget(self.sidebarButton2, stretch=1, alignment=Qt.AlignCenter)
-        self.sidebarInnards_layout.addWidget(self.sidebarButton3, stretch=1, alignment=Qt.AlignCenter)
-        self.sidebarInnards_layout.addWidget(self.sidebarSpace, stretch=3)
-        self.sidebarInnards_layout.setSpacing(0)
-        self.sidebarInnards.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.sidebarSpace.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.right.setLayout(self.right_layout)
-        self.container.setLayout(self.container_layout)
-        self.right_layout.addWidget(self.topRight, stretch=6)
-        self.right_layout.addWidget(self.container, stretch=6)
-        self.topRight.setLayout(self.topRight_layout)
-        self.topRight_layout.addWidget(self.tab, stretch=1)
-        self.topRight_layout.addWidget(self.box, stretch=16)
+        legend = self.chart.legend()
 
-        self.topRight.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        legend.setAlignment(Qt.AlignBottom)  # Align the legend at the bottom
+        # legend.setAlignment(Qt.AlignRight)  # Moves legend to the right, forcing it to wrap
+        # legend.setColumnCount(2)
+        # Create chart view and set render hint
+        self.chart_view = QChartView(self.chart)
+        self.chart_view.setObjectName("barChart")
+        self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        self.bottomRight.setLayout(self.bottomRight_layout)
-        self.bottomRight_layout.addWidget(self.tabBottom, stretch=1)
-        self.bottomRight_layout.addWidget(self.boxBottom, stretch=16)
+        self.barGraphWindow_layout.addWidget(self.chart_view, stretch=6)
 
-        self.weatherWindow.setLayout(self.weatherWindow_layout)
-        self.weatherWindow_layout.addWidget(self.windChart, stretch=1)
-        self.weatherWindow_layout.addWidget(self.windChartBox, stretch=16)
+        self.chart.setBackgroundBrush(QBrush(Qt.transparent))  # Make chart background transparent
+        self.chart_view.setBackgroundBrush(QBrush(Qt.transparent))
 
-        self.container_layout.addWidget(self.bottomRight, stretch=1)
-        self.container_layout.addWidget(self.weatherWindow, stretch=1)
-        self.container_layout.setContentsMargins(0, 0, 0, 0)
+        # Force chart refresh
+        self.chart_view.update()
 
-        self.bottomRight.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        self.weatherWindow.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        # ---- the statistics ----#
+        self.stats_dict = self.core.statistics
+        self.faults = self.core.specific_fault_counts
 
-        self.tab.setLayout(self.tab_layout)
-        self.tab_layout.addWidget(self.titleTop, stretch=1)
-        self.box.setLayout(self.box_layout)
+        self.units = [" cells", " cells", " V", " A", " °C"]
 
-        self.tabBottom.setLayout(self.tabBottom_layout)
-        self.tabBottom_layout.addWidget(self.titleBottom, stretch=1)
-        self.boxBottom.setLayout(self.boxBottom_layout)
+        """
+                    "Total Cells Generated": total_cells,
+            "Number of Compromised Cells": compromised_cells,
+            "Average Voltage": f"{avg_voltage:.2f}",
+            "Average Current": f"{avg_current:.2f}",
+            "Average Temperature": f"{avg_temp:.2f}"""
+        i = 0
+        # Iterate over the dictionary to create rows for each statistic
+        for stat, value in self.stats_dict.items():
+            # Create the horizontal layout (QHBoxLayout) for each statistic
 
-        self.windChart.setLayout(self.windChart_layout)
-        self.windChart_layout.addWidget(self.windChartTitle)
+            stat_layout = QHBoxLayout()
 
-        self.boxBottom_layout.setSpacing(0)
-        self.weatherWindow_layout.setSpacing(0)
+            # Create the QLabel for the statistic name
+            stat_label = QLabel(stat)
+            stat_label.setAlignment(Qt.AlignLeft)
+
+            print(stat)
 
 
-        self.topRight_layout.setSpacing(0)
-        self.bottomRight_layout.setSpacing(0)
+            # Create the QLabel for the statistic value
+            value_label = QLabel(str(value) + self.units[i])
+            value_label.setAlignment(Qt.AlignRight)
+            i += 1
+            # Add the labels to the horizontal layout
+            stat_layout.addWidget(stat_label, stretch=3)
+            stat_layout.addWidget(value_label, stretch=1)
 
+            # Add the horizontal layout to the main vertical layout
+            self.statisticsWindow_layout.addLayout(stat_layout)
 
-    def get_available_com_ports(self):
-        """Retrieve a list of available COM ports."""
-        ports = serial.tools.list_ports.comports()
-        available_ports = [port.device.replace("COM", "") for port in ports]  # Extract COM numbers
-        return set(available_ports)
-
-    def validate_com_ports(self):
-        """Validate that input COM ports are integers and available."""
-        com_numbers_text = []
-        available_ports = self.get_available_com_ports()
-
-        for i, com in enumerate(self.comNumber_fields):
-            text = com.text().strip()
-
-            if text == "":
-                self.show_error_popup(f"COM Number {i + 1} cannot be empty!")
-                return
-
-            try:
-                value = int(text)  # Ensure it's an integer
-
-                if str(value) not in available_ports:
-                    self.show_error_popup(f"COM{value} is not available on this system.")
-                    return
-
-                com_numbers_text.append(value)
-            except ValueError:
-                self.show_error_popup(f"Invalid input in COM Number {i + 1}. Must be an integer!")
-                return
-
-        # Print the valid and available COM ports
-        for i, value in enumerate(com_numbers_text):
-            print(f"COM Number {i + 1}: COM{value} (Valid & Available)")
-
-        self.core.receive_com_ports(com_numbers_text)
-
-        print("COM Ports sent to core:", com_numbers_text)  # Debugging print
-        print("From the interface:", self.core.config)  # Debug print to ensure config is correct
-        self.core.run_simulation()
-
-        return com_numbers_text
-
-    def show_error_popup(self, message):
-        """Display an error popup."""
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Critical)
-        msg.setWindowTitle("Input Error")
-        msg.setText(message)
-        msg.exec()
-
-    def setup_actions(self):
-        """Set up actions for buttons."""
-        # Connect the button click event to the function that prints input values
-        self.sidebarButton1.clicked.connect(self.on_submit_button_clicked)
-
-    def on_submit_button_clicked(self):
-        # Ensure we have a valid parent with QStackedWidget
-        parent = self.parent()
-        if parent:
-            # Switch to the second window (config)
-            parent.setCurrentIndex(1)  # Assuming '1' is the index for the config window
-        else:
-            print("Parent widget not found.")
-
-    def print_input_values(self):
-        """Print the values of the input fields to the console."""
-        plant_number = self.plantInputsLeftNumberInput.text()
-        location = self.plantInputsLeftLocationInput.text()
-        turbine_blade_length = self.turbineInputsLeftNumberInput.text()
-        energy_coefficient = self.turbineInputsLeftLocationTitle.text()
-        weather_min_wind = self.weatherInputsLeftNumberInput.text()
-        weather_max_wind = self.weatherInputsLeftNumberTitle.text()
-        block_input = self.blockInput.text()
-        rack_input = self.rackInput.text()
-        module_input = self.moduleInput.text()
-        cell_input = self.cellInput.text()
-
-        print("Plant Number of Turbines:", plant_number)
-        print("Location:", location)
-        print("Turbine Blade Length:", turbine_blade_length)
-        print("Weather Min Wind Speed:", weather_min_wind)
-        print("Block Input:", block_input)
-        print("Rack Input:", rack_input)
-        print("Module Input:", module_input)
-        print("Cell Input:", cell_input)
-
-    def show_error_message(self):
-        """Function to display error messages."""
-        msg = QMessageBox()
-        msg.setObjectName("error")
-        msg.setIcon(QMessageBox.Critical)
-        msg.setText(self)
-        msg.setWindowTitle("Input Error")
-        msg.setFixedSize(600, 600)
-        msg.exec()
-
-    def on_button_click(self):
-        if self.validate_inputs():
-            print("Inputs are valid. Proceeding...")
-        else:
-            print("Input validation failed.")
-
-    def apply_stylesheet(self):
-        """Applies the application stylesheet."""
-        app = QApplication.instance()
-        stylesheet = load_stylesheet(self, "resources\\style_test_001.qss")
-        app.setStyleSheet(stylesheet)
+            # Iterate over the dictionary to create rows for each statistic
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.core = Core()  # Initialize Core here
-        self.setWindowTitle('Main Window')
+        self.setWindowTitle('Hermes')
 
         self.stack = QStackedWidget(self)
         self.setCentralWidget(self.stack)
 
         self.window_home = HermesHome(self.core)
         self.window_config = HermesConfig(self.core)
-        self.window_results = HermesResults(self.core)
+        # self.window_results = HermesResults(self.core)
 
         # ---- adding the windows to the stack for the page order ----#
-        #self.stack.addWidget(self.window_results)
+        # self.stack.addWidget(self.window_results)
         self.stack.addWidget(self.window_home)
         self.stack.addWidget(self.window_config)
-        #self.stack.addWidget(self.window_results)
+        # self.stack.addWidget(self.window_results)
 
         self.core.response_received.connect(self.window_config.echo, Qt.QueuedConnection)
 
@@ -1411,6 +1351,9 @@ class MainWindow(QMainWindow):
 
     def show_page2(self):
         self.stack.setCurrentWidget(self.window_config)
+
+    def show_page3(self):
+        self.stack.setCurrentWidget(self.window_results)
 
 
 def load_stylesheet(self, file_path):
