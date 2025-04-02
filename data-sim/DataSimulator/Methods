@@ -9,9 +9,9 @@ from queue import Queue
 # Constants
 AIR_DENSITY = 1.225
 MAX_VOLTAGE = 2.7
-FAULT_PROBABILITY = 0.01  # Reduced for less frequent faults during testing
+FAULT_PROBABILITY = 0.5  # Reduced for less frequent faults during testing
 C_RATE = random.uniform(1, 5)  # Allow discharge from 1C to 5C
-
+random.seed()
 
 class Cell:
     """Represents a single cell in the hierarchy with attributes for simulation."""
@@ -24,9 +24,9 @@ class Cell:
         self.status = "Normal"
         self.faults = {
             "overcharge": False,
-            "over_discharge": False,
+            "overdischarge": False,
             "overheating": False,
-            "over_current": False,
+            "overcurrent": False,
             "thermal_runaway": False
         }
 
@@ -165,35 +165,21 @@ class Methods:
             json.dump(data, json_file, indent=4)
 
     def send_data_to_esp32(self):
-        """Start the serial worker threads for live updates."""
-        com_ports = []
-        for port in self.core.com_ports:
-            if isinstance(port, str):
-                try:
-                    com_ports.append(int(port.replace("COM", "")))
-                except ValueError:
-                    print(f"Warning: Could not convert '{port}' to an integer COM port number.")
-            elif isinstance(port, int):
-                com_ports.append(port)  # Assume it's already the integer part
-            else:
-                print(f"Warning: Unexpected type '{type(port)}' in self.core.com_ports: '{port}'. Skipping.")
+        """Start the serial worker threads, assigning COM ports based on module number and handling disconnected ports."""
+        available_com_ports = [f"COM{port}" for port in self.core.com_ports]
+        num_available_ports = len(available_com_ports)
+        print(f"Attempting to use the following COM ports for assignment: {available_com_ports}")
 
-        # Use all detected COM ports as potential connected ports
-        connected_ports = com_ports
-        print(f"Attempting to connect to the following COM ports: {connected_ports}")
-
-        if not connected_ports:
+        if not available_com_ports:
             print("No COM ports available to connect to.")
             return
 
-        # Populate the queue with the available COM ports initially
-        for port in connected_ports:
-            self.com_port_queue.put(f"COM{port}")
-
-        num_modules_total = sum(len(rack.modules) for b in self.blocks for rack in b.racks)
-        modules_processed_count = 0
         self.active_workers = []
-        worker_just_finished = False  # Flag to indicate a worker just finished
+        modules_processed_count = 0
+        num_modules_total = sum(len(rack.modules) for b in self.blocks for rack in b.racks)
+        assigned_com_ports = {}  # Keep track of which module is assigned to which COM port
+        recently_finished_ports = set()  # Track ports where a worker recently finished
+        failed_ports = set()  # Track ports where a worker likely failed
 
         try:
             for block in self.blocks:
@@ -203,57 +189,68 @@ class Methods:
                     for module in rack.modules:
                         assigned = False
                         while not assigned:
-                            if self.com_port_queue.empty():
-                                print(f"No COM ports available for Module {module.id}. Waiting for a worker to finish...")
-                                if self.active_workers:
-                                    while True:
-                                        finished_in_this_cycle = False
-                                        workers_to_remove = []
-                                        for worker in self.active_workers:
-                                            if not worker.isRunning():
-                                                print(f"Worker for {worker.module.id} on {worker.com_port} finished.")
-                                                workers_to_remove.append(worker)
-                                                finished_in_this_cycle = True
+                            module_number = int(module.id.replace("M", "")) if module.id.startswith("M") else int(
+                                module.id)
+                            required_port_index = (module_number - 1) % num_available_ports
+                            required_com_port = available_com_ports[required_port_index]
 
-                                        for worker in workers_to_remove:
-                                            self.active_workers.remove(worker)
-                                            self.com_port_queue.put(worker.com_port)
-                                            worker_just_finished = True # Set the flag
+                            is_port_busy = False
+                            for worker in self.active_workers:
+                                if worker.isRunning() and worker.com_port == required_com_port:
+                                    is_port_busy = True
+                                    break
 
-                                        if finished_in_this_cycle:
-                                            time.sleep(0.5)  # Introduce a delay after a worker finishes
-                                            break  # Try to get a port again
-                                        time.sleep(0.1)
-                                else:
-                                    print("No workers are currently running, but the queue is empty.")
-                                    time.sleep(1)
-                            else:
-                                if worker_just_finished:
-                                    print("Brief pause after a worker finished before assigning next module...")
-                                    time.sleep(0.3) # Small pause before getting from queue
-                                    worker_just_finished = False
-
-                                com_port_str = self.com_port_queue.get()
-                                print(f"Assigning Module {module.id} to {com_port_str}")
-                                worker = SerialWorker(com_port_str, block, rack, module)
-                                worker.response_received.connect(self.core.receive_data_from_methods)
-                                worker.finished.connect(lambda: None) # We are handling queue directly
+                            if not is_port_busy and required_com_port not in recently_finished_ports and required_com_port not in failed_ports:
+                                print(f"Assigning Module {module.id} to {required_com_port} (based on module number)")
+                                worker = SerialWorker(required_com_port, block, rack, module)
+                                worker.finished.connect(
+                                    lambda: self.handle_worker_finished(worker, recently_finished_ports,
+                                                                                 failed_ports))
                                 self.active_workers.append(worker)
                                 worker.start()
+                                assigned_com_ports[module.id] = required_com_port
                                 time.sleep(0.1)
                                 modules_processed_count += 1
-                                print(f"Worker {len(self.active_workers)} started for Module {module.id} on {com_port_str}")
+                                print(
+                                    f"Worker {len(self.active_workers)} started for Module {module.id} on {required_com_port}")
                                 time.sleep(0.5)
                                 assigned = True
+                            else:
+                                if required_com_port in failed_ports:
+                                    print(f"COM port {required_com_port} likely failed. Skipping for now...")
+                                elif required_com_port in recently_finished_ports:
+                                    print(f"COM port {required_com_port} recently finished. Waiting...")
+                                else:
+                                    print(f"COM port {required_com_port} is currently busy. Waiting...")
+                                time.sleep(1)  # Wait and check again
 
-            # Wait for any remaining workers to finish
+            # Wait for all workers to finish
             for worker in self.active_workers:
                 worker.wait()
 
-            print("Finished send_data_to_esp32. Total modules:", num_modules_total, ", Processed:", modules_processed_count)
+            print("Finished send_data_to_esp32. Total modules:", num_modules_total, ", Processed:",
+                  modules_processed_count)
 
         except Exception as e:
             print(f"An error occurred in send_data_to_esp32: {e}")
+
+    def handle_worker_finished(self, worker, recently_finished_ports, failed_ports):
+        """Handle worker finishing and track recently used/failed ports."""
+        print(f"Worker for {worker.module.id} on {worker.com_port} has finished.")
+        if worker in self.active_workers:
+            self.active_workers.remove(worker)
+            recently_finished_ports.add(worker.com_port)
+            # Check if the worker likely failed (e.g., no response or a specific error)
+            if not hasattr(worker, 'full_response') or not worker.full_response:
+                failed_ports.add(worker.com_port)
+                print(f"COM port {worker.com_port} likely had an issue (no response).")
+
+            # Optionally, remove from recently_finished_ports after a short delay
+            if hasattr(self, 'startTimer'):  # Check if QObject
+                self.startTimer(2000, lambda port=worker.com_port: recently_finished_ports.discard(port))
+            else:
+                import threading
+                threading.Timer(2, lambda port=worker.com_port: recently_finished_ports.discard(port)).start()
 
     def run_simulation(self):
         """Run the full simulation process."""
@@ -263,6 +260,7 @@ class Methods:
         self.store_data()
         self.send_data_to_esp32()
         print("Simulation complete.")
+        self.core.receive_data_from_methods("Simulation complete with data")  # or you can pass actual data
 
 
 class SerialWorker(QThread):
