@@ -291,7 +291,7 @@ String WaitForData(HardwareSerial &serial) {
     while (true) {
     serial.println("Available");
     listen = readFromSerial(serial); 
-    if (listen != "PING" && listen != "") {
+    if (listen != "PING" && listen != "" &&  listen.startsWith("{") && listen.endsWith("}")) {
         Serial.println("Did not receive PING, instead received: " + listen + "from " + serial_number);
         receivedJsonSerial = listen;
         return receivedJsonSerial;
