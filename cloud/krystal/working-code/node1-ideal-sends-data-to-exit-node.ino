@@ -1,23 +1,31 @@
-// Iteration 2
 #include <ArduinoJson.h>
 #include <Wire.h>
-// #include "SC16IS752.h"
+#include "SC16IS752.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include <map>
 
 #define NODE_ID 1  // This node's ID
 #define ACK_TIMEOUT 500  // Timeout for acknowledgment (ms)
-#define LISTEN_TIMEOUT 500
+#define LISTEN_TIMEOUT 500  
 #define WAITFORDATA_TIMEOUT 500  
+
+// Define destination node numbers
+#define NODE_RIGHT 5
+#define NODE_DOWN 2
+#define NODE_LEFT
+
+
+#define SEND_QUEUE_NAME(node) send_node_##node##Queue
+#define RETRY_QUEUE_NAME(node) retry_node_##node##Queue
 
 SemaphoreHandle_t serial1Semaphore;
 SemaphoreHandle_t serial2Semaphore;
 QueueHandle_t jsonQueue;
-QueueHandle_t retry_node_5Queue;
-QueueHandle_t retry_node_2Queue;
-QueueHandle_t send_node_5Queue;
-QueueHandle_t send_node_2Queue;
+QueueHandle_t SEND_QUEUE_NAME(NODE_RIGHT);  
+QueueHandle_t SEND_QUEUE_NAME(NODE_DOWN);  
+QueueHandle_t RETRY_QUEUE_NAME(NODE_RIGHT); 
+QueueHandle_t RETRY_QUEUE_NAME(NODE_DOWN); 
 QueueHandle_t processing_Queue;
 
 // Task handles for managing FreeRTOS tasks
@@ -29,6 +37,7 @@ TaskHandle_t Task5Handle = NULL;
 TaskHandle_t Task6Handle = NULL;
 TaskHandle_t Task7Handle = NULL;
 TaskHandle_t Task8Handle = NULL;
+
 
 bool listenForPing(HardwareSerial *serialPort);
 String WaitForData(HardwareSerial &serial);
@@ -42,6 +51,7 @@ int DeviceID(String json);
 const char* mostCommonFault(const char* faults[], int size);
 
 
+
 void setup() {
 
     Serial.begin(115200);
@@ -49,39 +59,41 @@ void setup() {
     Serial2.begin(9600, SERIAL_8N1, 16, 17);  
     Serial1.begin(9600, SERIAL_8N1, 4, 23);  
 
-    jsonQueue = xQueueCreate(10, sizeof(char *)); 
+     jsonQueue = xQueueCreate(10, sizeof(char *)); 
     if (jsonQueue == NULL) {
         Serial.println("Queue creation failed!");
     } else {
         Serial.println("Queue created successfully.");
     }
 
-    retry_node_5Queue = xQueueCreate(10, sizeof(char *)); 
-    if (retry_node_5Queue == NULL) {
-        Serial.println("retry_node_5 Queuecreation failed!");
+    RETRY_QUEUE_NAME(NODE_RIGHT) = xQueueCreate(10, sizeof(char *)); 
+    if ( RETRY_QUEUE_NAME(NODE_RIGHT) == NULL) {
+        Serial.println("retry node right  Queue creation failed!");
     } else {
-        Serial.println("retry_node_5Queue created successfully.");
+        Serial.println("retry node right queue created successfully.");
     }
 
-    retry_node_2Queue = xQueueCreate(10, sizeof(char *)); 
-    if (retry_node_2Queue == NULL) {
-        Serial.println("retry_node_2Queue creation failed!");
+
+    RETRY_QUEUE_NAME(NODE_DOWN) = xQueueCreate(10, sizeof(char *)); 
+    if (RETRY_QUEUE_NAME(NODE_DOWN) == NULL) {
+        Serial.println("down node queue creation failed!");
     } else {
-        Serial.println("retry_node_2Queue created successfully.");
+        Serial.println("down node queue created successfully.");
     }
 
-    send_node_5Queue = xQueueCreate(10, sizeof(char *)); 
-    if (send_node_5Queue == NULL) {
-        Serial.println("send_node_5Queue creation failed!");
+    SEND_QUEUE_NAME(NODE_RIGHT) = xQueueCreate(10, sizeof(char *)); 
+    if (SEND_QUEUE_NAME(NODE_RIGHT) == NULL) {
+        Serial.println("right node queue creation failed!");
     } else {
-        Serial.println("send_node_5Queuecreated successfully.");
+        Serial.println("right node queue created successfully.");
     }
 
-    send_node_2Queue = xQueueCreate(10, sizeof(char *)); 
-    if (send_node_2Queue == NULL) {
-        Serial.println("send_node_2Queue creation failed!");
+
+    SEND_QUEUE_NAME(NODE_DOWN) = xQueueCreate(10, sizeof(char *)); 
+    if (SEND_QUEUE_NAME(NODE_DOWN)== NULL) {
+        Serial.println("Node down queue creation failed!");
     } else {
-        Serial.println("send_node_2Queuecreated successfully.");
+        Serial.println("Node down queue created successfully.");
     }
 
     processing_Queue = xQueueCreate(10, sizeof(char *)); 
@@ -91,6 +103,8 @@ void setup() {
         Serial.println("processing_Queue created successfully.");
     }
 
+
+
     serial1Semaphore = xSemaphoreCreateBinary();
     serial2Semaphore = xSemaphoreCreateBinary();
     xSemaphoreGive(serial1Semaphore);
@@ -98,12 +112,12 @@ void setup() {
 
     // Create FreeRTOS tasks
     xTaskCreatePinnedToCore(listenForNodesTask, "listenForNode5", 4096, NULL, 1, &Task1Handle, 0); // Run on Core 0t
-    // xTaskCreatePinnedToCore(listenForNode2Task, "listenForNode2", 4096, NULL, 1, &Task4Handle, 0); // Run on Core 0
+    xTaskCreatePinnedToCore(listenForNode2Task, "listenForNode2", 4096, NULL, 1, &Task4Handle, 0); // Run on Core 0
     xTaskCreatePinnedToCore(ParseTask, "Parse", 4096, NULL, 1, &Task5Handle, 0); // Run on Core 0
-    xTaskCreatePinnedToCore(SendToNode5Task, "SendData", 4096, NULL, 1, &Task2Handle, 1); // Run on Core 1
-    xTaskCreatePinnedToCore(RetrySend5Task, "RetrySend", 4096, NULL, 1, &Task3Handle, 1); // Run on Core 1
-    xTaskCreatePinnedToCore(SendToNode2Task, "SendData", 4096, NULL, 1, &Task6Handle, 1); // Run on Core 1
-    xTaskCreatePinnedToCore(RetrySend2Task, "RetrySend", 4096, NULL, 1, &Task7Handle, 1); // Run on Core 1
+    xTaskCreatePinnedToCore(SendToRightNodeTask, "SendData", 4096, NULL, 1, &Task2Handle, 1); // Run on Core 1
+    xTaskCreatePinnedToCore(RetrySendRightNodeTask, "RetrySend", 4096, NULL, 1, &Task3Handle, 1); // Run on Core 1
+    xTaskCreatePinnedToCore(SendToDownNodeTask, "SendData", 4096, NULL, 1, &Task6Handle, 1); // Run on Core 1
+    xTaskCreatePinnedToCore(RetrySendDownNodeTask, "RetrySend", 4096, NULL, 1, &Task7Handle, 1); // Run on Core 1
     xTaskCreatePinnedToCore(ProcessTask, "ProcesData", 4096, NULL, 1, &Task8Handle, 1); // Run on Core 1
 }
 
@@ -145,12 +159,17 @@ void listenForNodesTask(void *pvParameters) {
             Serial.println("jsonQueue! Data not sent.");
             free(Data);  // Prevent memory leak if sending fails
         }
+
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
 
 
+
+
+
 void listenForNode2Task(void *pvParameters) {
+
   
     SemaphoreHandle_t *semaphore;
 
@@ -166,9 +185,13 @@ void listenForNode2Task(void *pvParameters) {
     serial_number = "serial1";
     while (true) {
 
-    Serial.println("listen to node 1 starts");
+    
+    // Serial.println("listen to node 1 starts");
+
+
 
     // Check for ping message
+  
     ping = listenForPing(serialPort);
     if (ping) {
       
@@ -184,23 +207,30 @@ void listenForNode2Task(void *pvParameters) {
             continue; // Skip sending if allocation failed
         }
 
-        if (xQueueSend(send_node_5Queue, &Data, 50 / portTICK_PERIOD_MS) == pdPASS) {
-            if (uxQueueMessagesWaiting(send_node_5Queue) == 1) {  // Notify only for first message
+        if (xQueueSend(SEND_QUEUE_NAME(NODE_RIGHT), &Data, 50 / portTICK_PERIOD_MS) == pdPASS) {
+            if (uxQueueMessagesWaiting(SEND_QUEUE_NAME(NODE_RIGHT)) == 1) {  // Notify only for first message
                 xTaskNotifyGive(Task2Handle); // send to node 5
             }
         } else {
-            Serial.println("send_node_5Queue full! Data not sent.");
+            Serial.println("SEND_QUEUE_NAME(NODE_RIGHT) full! Data not sent.");
             free(Data);  
         }
       }
+
+
+
+
     }
-      vTaskDelay(100 / portTICK_PERIOD_MS);  
+
+
+      vTaskDelay(100 / portTICK_PERIOD_MS);
+        
   }
 
-
-void SendToNode5Task(void *pvParameters) {
+void SendToRightNodeTask(void *pvParameters) {
 
     SemaphoreHandle_t semaphore;
+
 
     semaphore = serial2Semaphore;
 
@@ -212,103 +242,80 @@ void SendToNode5Task(void *pvParameters) {
     while (true) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);  // Wait for a notification to begin processing
 
-        while (uxQueueMessagesWaiting(send_node_5Queue) > 0) {  // Process all messages
+        while (uxQueueMessagesWaiting(SEND_QUEUE_NAME(NODE_RIGHT)) > 0) {  // Process all messages
             char *DataSend;
-            if (xQueueReceive(send_node_5Queue, &DataSend, portMAX_DELAY) == pdTRUE) {
+            if (xQueueReceive(SEND_QUEUE_NAME(NODE_RIGHT), &DataSend, portMAX_DELAY) == pdTRUE) {
                 if (xSemaphoreTake(semaphore, portMAX_DELAY) == pdTRUE) {  // Acquire semaphore
+                    char *DataCopy = strdup(DataSend);
+                    if (DataCopy == NULL) {
+                        Serial.println("Memory allocation failed for datacopy in send to right node task!");
+                        free(DataSend); 
+                        continue;   
+                    }
                     bool ack = waitForAck(&serial);
 
                     if (ack) {
                         Serial2.println(DataSend);
                         Serial.println("Sent JSON to " + serial_name+ ": \n" + String(DataSend));
-                        free(DataSend);
+                        
                     } else {
                         // Serial.println("Ack not received! Retrying...");
                         Serial.println("Did not send: " + String(DataSend));
 
-                        if (xQueueSend(retry_node_5Queue, &DataSend, 50 / portTICK_PERIOD_MS) != pdTRUE) {
-                            Serial.println("Failed to send to retry queue. Message lost meant for " + serial_name);
-                            free(DataSend);
+                        if (xQueueSend(RETRY_QUEUE_NAME(NODE_RIGHT), &DataCopy, 50 / portTICK_PERIOD_MS) != pdTRUE) {
+                            Serial.println("Failed to send to retry queue for right node. Message lost meant for " + serial_name);
+                            free(DataCopy);
                         } else {
                             Serial.println("Message moved to retry queue after attempting to send to " + serial_name);
                         }
                     }
+                    free(DataSend);
                     xSemaphoreGive(semaphore);  // Release semaphore
-                    vTaskDelay(100 / portTICK_PERIOD_MS); 
+                    vTaskDelay(50 / portTICK_PERIOD_MS); 
                 } 
             }
         }
     }
 }
 
+void RetrySendRightNodeTask(void *pvParameters) {
 
-void SendToNode2Task(void *pvParameters) {
-
-    SemaphoreHandle_t semaphore;
-
-    semaphore = serial1Semaphore;
-
-    HardwareSerial &serial = Serial1;
-
-    String serial_name = "Serial1";
-    
-    while (true) {
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);  // Wait for a notification to begin processing
-
-        while (uxQueueMessagesWaiting(send_node_2Queue) > 0) {  // Process all messages
-            char *DataSend;
-            if (xQueueReceive(send_node_2Queue, &DataSend, portMAX_DELAY) == pdTRUE) {
-                if (xSemaphoreTake(semaphore, portMAX_DELAY) == pdTRUE) {  // Acquire semaphore
-                    bool ack = waitForAck(&serial);
-
-                    if (ack) {
-                        Serial2.println(DataSend);
-                        Serial.println("Sent JSON to " + serial_name+ ": \n" + String(DataSend));
-                        free(DataSend);
-                    } else {
-                        // Serial.println("Ack not received! Retrying...");
-                        Serial.println("Did not send: " + String(DataSend));
-
-                        if (xQueueSend(retry_node_2Queue, &DataSend, 50 / portTICK_PERIOD_MS) != pdTRUE) {
-                            Serial.println("Failed to send to retry queue. Message lost meant for " + serial_name);
-                            free(DataSend);
-                        } else {
-                            Serial.println("Message moved to retry queue after attempting to send to " + serial_name);
-                        }
-                    }
-                    xSemaphoreGive(semaphore);  // Release semaphore
-                    vTaskDelay(100 / portTICK_PERIOD_MS); 
-                } 
-            }
-        }
-    }
-}
-
-
-void RetrySend5Task(void *pvParameters) {
   
     SemaphoreHandle_t semaphore;
 
+
     semaphore = serial2Semaphore;
     
     HardwareSerial &serial = Serial2;
     String serial_name = "Serial2";
 
     while (true) {
-        if (uxQueueMessagesWaiting(retry_node_5Queue) > 0) {  // Check if retry queue has messages
+        if (uxQueueMessagesWaiting(RETRY_QUEUE_NAME(NODE_RIGHT)) > 0) {  // Check if retry queue has messages
             char *retryData;
-            if (xQueueReceive(retry_node_5Queue, &retryData, portMAX_DELAY) == pdTRUE) {
+            if (xQueueReceive(RETRY_QUEUE_NAME(NODE_RIGHT), &retryData, portMAX_DELAY) == pdTRUE) {
                 if (xSemaphoreTake(semaphore, portMAX_DELAY) == pdTRUE) {  // Acquire semaphore
+                    char *DataCopy = strdup(retryData);
+                    if (DataCopy == NULL) {
+                        Serial.println("Memory allocation failed for datacopy in send to retry right node task!");
+                        free(retryData); 
+                        continue;   
+                    }
                     bool ack = waitForAck(&serial);
 
                     if (ack) {
                         Serial2.println(retryData);
                         Serial.println("Resent JSON to " + serial_name+ "\n" + String(retryData));
-                        free(retryData);
+                        // free(retryData);
                     } else {
-                        Serial.println("Resend failed to " + serial_name+ ", keeping in retry queue.");
-                        xQueueSend(retry_node_2Queue, &retryData, 50 / portTICK_PERIOD_MS);
+                        Serial.println("Resend failed to " + serial_name+ ", sending to node down queue");
+                            if (xQueueSend(SEND_QUEUE_NAME(NODE_DOWN), &DataCopy, 50 / portTICK_PERIOD_MS) != pdTRUE) {
+                            Serial.println("Failed to send to down queue for right node retry. Message lost meant for " + serial_name);
+                            free(DataCopy);
+                        } else {
+                            Serial.println("Message moved to retry queue after attempting to send to " + serial_name);
+                        }
                     }
+                    free(retryData);
                     xSemaphoreGive(semaphore);  // Release semaphore
                     vTaskDelay(100 / portTICK_PERIOD_MS); 
                 } 
@@ -318,9 +325,65 @@ void RetrySend5Task(void *pvParameters) {
 }
 
 
-void RetrySend2Task(void *pvParameters) {
+
+
+void SendToDownNodeTask(void *pvParameters) {
 
     SemaphoreHandle_t semaphore;
+
+
+    semaphore = serial1Semaphore;
+
+    HardwareSerial &serial = Serial1;
+
+    String serial_name = "Serial1";
+    
+
+    while (true) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);  // Wait for a notification to begin processing
+
+        while (uxQueueMessagesWaiting(SEND_QUEUE_NAME(NODE_DOWN)) > 0) {  // Process all messages
+            char *DataSend;
+            if (xQueueReceive(SEND_QUEUE_NAME(NODE_DOWN), &DataSend, portMAX_DELAY) == pdTRUE) {
+                if (xSemaphoreTake(semaphore, portMAX_DELAY) == pdTRUE) {  // Acquire semaphore
+                    char *DataCopy = strdup(DataSend);
+                    if (DataCopy == NULL) {
+                        Serial.println("Memory allocation failed for datacopy in send to right node task!");
+                        free(DataSend); 
+                        continue;   
+                    }
+                    bool ack = waitForAck(&serial);
+
+                    if (ack) {
+                        Serial2.println(DataSend);
+                        Serial.println("Sent JSON to " + serial_name+ ": \n" + String(DataSend));
+                        
+                    } else {
+                        // Serial.println("Ack not received! Retrying...");
+                        Serial.println("Did not send: " + String(DataSend));
+
+                        if (xQueueSend(RETRY_QUEUE_NAME(NODE_DOWN), &DataCopy, 50 / portTICK_PERIOD_MS) != pdTRUE) {
+                            Serial.println("Failed to send to retry queue for down node. Message lost meant for " + serial_name);
+                            free(DataCopy);
+                        } else {
+                            Serial.println("Message moved to retry queue after attempting to send to " + serial_name);
+                        }
+                    }
+                    free(DataSend);
+                    xSemaphoreGive(semaphore);  // Release semaphore
+                    vTaskDelay(100 / portTICK_PERIOD_MS); 
+                } 
+            }
+        }
+    }
+}
+
+
+void RetrySendDownNodeTask(void *pvParameters) {
+
+  
+    SemaphoreHandle_t semaphore;
+
 
     semaphore = serial1Semaphore;
     
@@ -328,9 +391,9 @@ void RetrySend2Task(void *pvParameters) {
     String serial_name = "Serial1";
 
     while (true) {
-        if (uxQueueMessagesWaiting(retry_node_2Queue) > 0) {  // Check if retry queue has messages
+        if (uxQueueMessagesWaiting(RETRY_QUEUE_NAME(NODE_DOWN)) > 0) {  // Check if retry queue has messages
             char *retryData;
-            if (xQueueReceive(retry_node_2Queue, &retryData, portMAX_DELAY) == pdTRUE) {
+            if (xQueueReceive(RETRY_QUEUE_NAME(NODE_DOWN), &retryData, portMAX_DELAY) == pdTRUE) {
                 if (xSemaphoreTake(semaphore, portMAX_DELAY) == pdTRUE) {  // Acquire semaphore
                     bool ack = waitForAck(&serial);
 
@@ -340,8 +403,9 @@ void RetrySend2Task(void *pvParameters) {
                         free(retryData);
                     } else {
                         Serial.println("Resend failed to " + serial_name+ ", keeping in retry queue.");
-                        xQueueSend(retry_node_2Queue, &retryData, 50 / portTICK_PERIOD_MS);
+                        xQueueSend(RETRY_QUEUE_NAME(NODE_DOWN), &retryData, 50 / portTICK_PERIOD_MS);
                     }
+                  
                     xSemaphoreGive(semaphore);  // Release semaphore
                     vTaskDelay(100 / portTICK_PERIOD_MS); 
                 } 
@@ -350,6 +414,38 @@ void RetrySend2Task(void *pvParameters) {
     }
 }
 
+// void ParseTask(void *pvParameters) {
+//     SemaphoreHandle_t semaphore;
+//     semaphore = serial2Semaphore;
+
+//     while (true) {
+//         ulTaskNotifyTake(pdTRUE, portMAX_DELAY); 
+
+//         if (uxQueueMessagesWaiting(jsonQueue) > 0) {  // Check if JSON queue has messages
+//             char *Data;
+//             if (xQueueReceive(jsonQueue, &Data, portMAX_DELAY) == pdTRUE) {
+//                 int deviceID = DeviceID(Data);
+//                 if (deviceID == NODE_ID) {
+//                     // Try adding to processing queue
+//                     if (xQueueSend(processing_Queue, &Data, 50 / portTICK_PERIOD_MS) == pdTRUE) {
+               
+//                         xTaskNotifyGive(Task8Handle); // process it
+
+//                     } 
+//                     else {
+//                         Serial.println("Processing queue full");
+//                     }
+//                 }
+//                 else {
+
+//                         xQueueSend(send_node_5Queue, &Data, 50 / portTICK_PERIOD_MS);
+//                         xTaskNotifyGive(Task2Handle); // send to node 5
+//                 }
+//                 // free(Data);
+//             }
+//         } 
+//     }
+// }
 
 void ParseTask(void *pvParameters) {
     SemaphoreHandle_t semaphore;
@@ -362,23 +458,32 @@ void ParseTask(void *pvParameters) {
             char *Data;
             if (xQueueReceive(jsonQueue, &Data, portMAX_DELAY) == pdTRUE) {
                 int deviceID = DeviceID(Data);
-                if (deviceID == NODE_ID) {
-                    // Try adding to processing queue
-                    if (xQueueSend(processing_Queue, &Data, 50 / portTICK_PERIOD_MS) == pdTRUE) {
-               
-                        xTaskNotifyGive(Task8Handle); // process it
 
-                    } 
-                    else {
+                // Create a copy before sending
+                char *DataCopy = strdup(Data);
+                if (DataCopy == NULL) {
+                    Serial.println("Memory allocation failed!");
+                    free(Data); // Free the original data since it's no longer needed
+                    continue;   // Skip this iteration
+                }
+
+                if (deviceID == NODE_ID) {
+                    if (xQueueSend(processing_Queue, &DataCopy, 50 / portTICK_PERIOD_MS) == pdTRUE) {
+                        xTaskNotifyGive(Task8Handle); // Process it
+                    } else {
                         Serial.println("Processing queue full");
+                        free(DataCopy);  // Free if sending fails
+                    }
+                } else {
+                    if (xQueueSend(SEND_QUEUE_NAME(NODE_RIGHT), &DataCopy, 50 / portTICK_PERIOD_MS) == pdTRUE) {
+                        xTaskNotifyGive(Task2Handle); // Send to node 5
+                    } else {
+                        Serial.println("Send queue full!");
+                        free(DataCopy);  // Free if sending fails
                     }
                 }
-                else {
 
-                        xQueueSend(send_node_5Queue, &Data, 50 / portTICK_PERIOD_MS);
-                        xTaskNotifyGive(Task2Handle); // send to node 5
-                }
-                // free(Data);
+                free(Data); // Free the original data after making a copy
             }
         } 
     }
@@ -392,64 +497,93 @@ void ProcessTask(void *pvParameters) {
         if (uxQueueMessagesWaiting(processing_Queue) > 0) {
             char *Data;
             if (xQueueReceive(processing_Queue, &Data, portMAX_DELAY) == pdTRUE) {
-              StaticJsonDocument<1024> doc;
-              DeserializationError error = deserializeJson(doc, Data);
+                StaticJsonDocument<2048> doc;
+                DeserializationError error = deserializeJson(doc, Data);
+                if (error) {
+                    Serial.print("JSON Parse Error: ");
+                    Serial.println(error.c_str());
+                }
 
-              if (error) {
-                  Serial.print("JSON Parse Error: ");
-                  Serial.println(error.c_str());
-                  
-              }
+                JsonArray cells = doc["cells"];
+                float totalVoltage = 0, totalCurrent = 0, totalTemperature = 0;
+                int totalCells = cells.size();
+                int normalCells = 0, compromisedCells = 0;
+                std::map<String, int> faultCount;
+                JsonArray compromisedArray;
 
-              JsonArray cells = doc["cells"];
-              float totalVoltage = 0, totalCurrent = 0, totalTemperature = 0;
-              const char* faultList[10];
+                StaticJsonDocument<1024> summaryDoc;
+                summaryDoc["timeInSeconds"] = String(millis() / 1000);
+                summaryDoc["moduleID"] = doc["module_id"];
+                summaryDoc["deviceID"] = doc["deviceID"];
+                
+                // Create statistics before compromised_cells
+                JsonObject stats = summaryDoc.createNestedObject("statistics");
+                JsonArray compromisedList = summaryDoc.createNestedArray("compromised_cells");
 
-              for (int i = 0; i < cells.size(); i++) {
-                  totalVoltage += cells[i]["voltage"].as<float>();
-                  totalCurrent += cells[i]["current"].as<float>();
-                  totalTemperature += cells[i]["temperature"].as<float>();
-                  faultList[i] = cells[i]["faults"].as<const char*>();
-              }
+                for (JsonObject cell : cells) {
+                    float voltage = cell["voltage"].as<float>();
+                    float current = cell["current"].as<float>();
+                    float temperature = cell["temperature"].as<float>();
+                    const char* status = cell["status"];
+                    const char* fault = cell["faults"];
+                    
+                    totalVoltage += voltage;
+                    totalCurrent += current;
+                    totalTemperature += temperature;
+                    faultCount[fault]++;
 
-              float avgVoltage = totalVoltage / cells.size();
-              float avgCurrent = totalCurrent / cells.size();
-              float avgTemperature = totalTemperature / cells.size();
-              const char* commonFault = mostCommonFault(faultList, cells.size());
+                    if (String(status) == "Normal") {
+                        normalCells++;
+                    } else {
+                        compromisedCells++;
+                        JsonObject compromisedCell = compromisedList.createNestedObject();
+                        compromisedCell["id"] = cell["id"];
+                        compromisedCell["voltage"] = voltage;
+                        compromisedCell["curr"] = current;
+                        compromisedCell["temperature"] = temperature;
+                        compromisedCell["status"] = status;
+                        compromisedCell["faults"] = fault;
+                    }
+                }
 
-              // Create new JSON
-              StaticJsonDocument<256> summaryDoc;
-              summaryDoc["rack_id"] = doc["rack_id"];
-              summaryDoc["module_id"] = doc["module_id"];
-              summaryDoc["deviceID"] = doc["deviceID"];
-              summaryDoc["avg_voltage"] = avgVoltage;
-              summaryDoc["avg_current"] = avgCurrent;
-              summaryDoc["avg_temperature"] = avgTemperature;
-              summaryDoc["most_common_fault"] = commonFault;
+                // Populate statistics
+                stats["total_cells"] = totalCells;
+                stats["normal_cells"] = normalCells;
+                stats["compromised_cells"] = compromisedCells;
+                stats["average_current"] = totalCurrent / totalCells;
+                stats["average_voltage"] = totalVoltage / totalCells;
+                stats["average_temperature"] = totalTemperature / totalCells;
+                
+                // Populate fault counts
+                JsonObject faultCounts = stats.createNestedObject("fault_counts");
+                for (auto &entry : faultCount) {
+                    faultCounts[entry.first] = entry.second;
+                }
 
-              String output;
-              serializeJson(summaryDoc, output);
+                String output;
+                serializeJson(summaryDoc, output);
 
-              // Copy output into a dynamically allocated char array for queue safety
-              char* jsonCopy = (char*)pvPortMalloc(output.length() + 1);
-              if (jsonCopy != NULL) {
-                  strcpy(jsonCopy, output.c_str());
+                // Allocate memory for the output JSON string
+                char* jsonCopy = (char*)pvPortMalloc(output.length() + 1);
+                if (jsonCopy != NULL) {
+                    strcpy(jsonCopy, output.c_str());
 
-                  if (xQueueSend(send_node_5Queue, &jsonCopy, 50 / portTICK_PERIOD_MS) == pdPASS) {
-                      if (uxQueueMessagesWaiting(send_node_5Queue) == 1) {  // Notify only for first message
-                          xTaskNotifyGive(Task2Handle); // Notify send_to_node_5 task
-                      }
-                  } else {
-                      Serial.println("send_node_5Queue full! Data not sent.");
-                      vPortFree(jsonCopy);  // Prevent memory leak
-                  }
-              } else {
-                  Serial.println("Memory allocation failed!");
-              }
+                    // Send JSON to the next queue
+                    if (xQueueSend(SEND_QUEUE_NAME(NODE_DOWN), &jsonCopy, 50 / portTICK_PERIOD_MS) == pdPASS) {
+                        if (uxQueueMessagesWaiting(SEND_QUEUE_NAME(NODE_DOWN)) == 1) {
+                            xTaskNotifyGive(Task2Handle);  // Notify Task2 to send data
+                        }
+                    } else {
+                        Serial.println("send node right full! Data not sent.");
+                        vPortFree(jsonCopy);  // Prevent memory leak
+                    }
+                } else {
+                    Serial.println("Memory allocation failed!");
+                }
 
-              Serial.println("Processed JSON: \n" + output);
-              free(Data);
-          }
+                Serial.println("Processed JSON: \n" + output);
+                free(Data);
+            }
         }
     }
 }
@@ -473,7 +607,6 @@ int DeviceID(String json) {
     }
 }
 
-
 String ReadFromSimulator() {
     static String buffer = "";  // Static buffer to hold partial data between function calls
     String jsonData = "";
@@ -489,6 +622,7 @@ String ReadFromSimulator() {
             buffer = "";  // Reset the buffer for the next message
         }
     }
+
     // Return the complete message (if any) or an empty string
     return jsonData;
 }
@@ -508,6 +642,7 @@ String WaitForData(HardwareSerial &serial) {
         serial_number = "serial1";
     }
 
+
     unsigned long startTime = millis();  // Record the start time
     while (true) {
     listen = readFromSerial(serial); 
@@ -524,9 +659,14 @@ String WaitForData(HardwareSerial &serial) {
     if (millis() - startTime >= WAITFORDATA_TIMEOUT) {
         Serial.println("Timeout reached, stopping PING loop.");
         return "no data";
-    }   
+    }
+
+      
   }
 }
+
+
+    
 
 
 bool listenForPing(HardwareSerial *serialPort) {
@@ -539,23 +679,30 @@ bool listenForPing(HardwareSerial *serialPort) {
     } else if (serialPort == &Serial2) {
         serial_number = "serial2";
     } 
- 
+
+    
+    
     while (millis() - startTime < LISTEN_TIMEOUT) {  
         listen = readFromSerial(*serialPort);  
         listen.trim();  
         
-        Serial.println("Listening for PING from " + serial_number + ": [" + listen + "]");  
+        // Serial.println("Listening for PING from " + serial_number + ": [" + listen + "]");  
 
         if (listen == "PING") {
             Serial.println("Received PING");
             serialPort->println("Available");  
 
+            
             return true;  
         }
+
         vTaskDelay(1 / portTICK_PERIOD_MS); 
     }
 
     Serial.println("Did not receive PING within timeout from " + serial_number);
+        
+    
+
     return false;
 }
 
@@ -581,6 +728,7 @@ const char* mostCommonFault(const char* faults[], int size) {
             secondMaxCount = faultCount[faults[i]];
         }
     }
+
     return (String(mostCommon) == "Normal") ? secondMostCommon : mostCommon;
 }
 
@@ -622,7 +770,7 @@ String createBatteryJson2() {
 
     doc["rack_id"] = "R002";
     doc["module_id"] = "M001";
-    doc["deviceID"] = 1;
+    doc["deviceID"] = 9;
 
     JsonArray cells = doc.createNestedArray("cells");
     const char* ids[] = {"B001-R001-M001-C001", "B001-R001-M001-C002", "B001-R001-M001-C003", "B001-R001-M001-C004", "B001-R001-M001-C005", 
@@ -647,6 +795,7 @@ String createBatteryJson2() {
     serializeJson(doc, output);
     return output;
 }
+
 
 
 String createBatteryJson3() {
@@ -681,11 +830,15 @@ String createBatteryJson3() {
 }
 
 
+
+
 String readFromSerial(HardwareSerial &serial) {
+
 
     String receivedData = "";
 
     // Take the semaphore before accessing the serial line
+    
     while (serial.available()) {
         char c = serial.read();
 
@@ -698,8 +851,12 @@ String readFromSerial(HardwareSerial &serial) {
     }
     receivedData.trim();  // Remove unwanted spaces or newline chars
 
+
+    
+
     return receivedData;
 }
+
 
 
 bool waitForAck(HardwareSerial *serialPort) {
@@ -713,6 +870,7 @@ bool waitForAck(HardwareSerial *serialPort) {
         serial_number = "serial2";
     } 
     
+
     unsigned long startTime = millis();
     Serial.println("Sent: PING to " + serial_number);
     while (millis() - startTime < ACK_TIMEOUT) {
@@ -724,9 +882,12 @@ bool waitForAck(HardwareSerial *serialPort) {
             return true;
         }
         else {
-          Serial.println("Received Data after sending PING (waiitng for avaiable) from : " + serial_number  + receivedData);
+          // Serial.println("Received Data after sending PING (waiitng for avaiable) from : " + serial_number  + receivedData);
         }
     }
     Serial.println("did not respond in time.");
     return false;
 }
+
+
+
