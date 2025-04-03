@@ -103,7 +103,7 @@ void setup() {
 
     // Create FreeRTOS tasks
     xTaskCreatePinnedToCore(listenForNodesTask, "listenForNode5", 4096, NULL, 1, &Task1Handle, 0); // Run on Core 0t
-    // xTaskCreatePinnedToCore(listenForNode2Task, "listenForNode2", 4096, NULL, 1, &Task4Handle, 0); // Run on Core 0
+    xTaskCreatePinnedToCore(listenForNode2Task, "listenForNode2", 4096, NULL, 1, &Task4Handle, 0); // Run on Core 0
     xTaskCreatePinnedToCore(ParseTask, "Parse", 4096, NULL, 1, &Task5Handle, 0); // Run on Core 0
     xTaskCreatePinnedToCore(SendToNode5Task, "SendData", 4096, NULL, 1, &Task2Handle, 1); // Run on Core 1
     xTaskCreatePinnedToCore(RetrySend5Task, "RetrySend", 4096, NULL, 1, &Task3Handle, 1); // Run on Core 1
@@ -156,6 +156,9 @@ void listenForNodesTask(void *pvParameters) {
 }
 
 
+
+
+
 void listenForNode2Task(void *pvParameters) {
 
   
@@ -174,7 +177,7 @@ void listenForNode2Task(void *pvParameters) {
     while (true) {
 
     
-    Serial.println("listen to node 1 starts");
+    // Serial.println("listen to node 1 starts");
 
 
 
@@ -328,7 +331,7 @@ void RetrySend5Task(void *pvParameters) {
                         Serial.println("Resent JSON to " + serial_name+ "\n" + String(retryData));
                         free(retryData);
                     } else {
-                        Serial.println("Resend failed to " + serial_name+ ", keeping in retry queue.");
+                        Serial.println("Resend failed to " + serial_name+ ", keeping in retry queue, sending to node 2 queue.");
                         xQueueSend(retry_node_2Queue, &retryData, 50 / portTICK_PERIOD_MS);
                     }
                     xSemaphoreGive(semaphore);  // Release semaphore
@@ -375,6 +378,39 @@ void RetrySend2Task(void *pvParameters) {
 }
 
 
+// void ParseTask(void *pvParameters) {
+//     SemaphoreHandle_t semaphore;
+//     semaphore = serial2Semaphore;
+
+//     while (true) {
+//         ulTaskNotifyTake(pdTRUE, portMAX_DELAY); 
+
+//         if (uxQueueMessagesWaiting(jsonQueue) > 0) {  // Check if JSON queue has messages
+//             char *Data;
+//             if (xQueueReceive(jsonQueue, &Data, portMAX_DELAY) == pdTRUE) {
+//                 int deviceID = DeviceID(Data);
+//                 if (deviceID == NODE_ID) {
+//                     // Try adding to processing queue
+//                     if (xQueueSend(processing_Queue, &Data, 50 / portTICK_PERIOD_MS) == pdTRUE) {
+               
+//                         xTaskNotifyGive(Task8Handle); // process it
+
+//                     } 
+//                     else {
+//                         Serial.println("Processing queue full");
+//                     }
+//                 }
+//                 else {
+
+//                         xQueueSend(send_node_5Queue, &Data, 50 / portTICK_PERIOD_MS);
+//                         xTaskNotifyGive(Task2Handle); // send to node 5
+//                 }
+//                 // free(Data);
+//             }
+//         } 
+//     }
+// }
+
 void ParseTask(void *pvParameters) {
     SemaphoreHandle_t semaphore;
     semaphore = serial2Semaphore;
@@ -386,28 +422,36 @@ void ParseTask(void *pvParameters) {
             char *Data;
             if (xQueueReceive(jsonQueue, &Data, portMAX_DELAY) == pdTRUE) {
                 int deviceID = DeviceID(Data);
-                if (deviceID == NODE_ID) {
-                    // Try adding to processing queue
-                    if (xQueueSend(processing_Queue, &Data, 50 / portTICK_PERIOD_MS) == pdTRUE) {
-               
-                        xTaskNotifyGive(Task8Handle); // process it
 
-                    } 
-                    else {
+                // Create a copy before sending
+                char *DataCopy = strdup(Data);
+                if (DataCopy == NULL) {
+                    Serial.println("Memory allocation failed!");
+                    free(Data); // Free the original data since it's no longer needed
+                    continue;   // Skip this iteration
+                }
+
+                if (deviceID == NODE_ID) {
+                    if (xQueueSend(processing_Queue, &DataCopy, 50 / portTICK_PERIOD_MS) == pdTRUE) {
+                        xTaskNotifyGive(Task8Handle); // Process it
+                    } else {
                         Serial.println("Processing queue full");
+                        free(DataCopy);  // Free if sending fails
+                    }
+                } else {
+                    if (xQueueSend(send_node_5Queue, &DataCopy, 50 / portTICK_PERIOD_MS) == pdTRUE) {
+                        xTaskNotifyGive(Task2Handle); // Send to node 5
+                    } else {
+                        Serial.println("Send queue full!");
+                        free(DataCopy);  // Free if sending fails
                     }
                 }
-                else {
 
-                        xQueueSend(send_node_5Queue, &Data, 50 / portTICK_PERIOD_MS);
-                        xTaskNotifyGive(Task2Handle); // send to node 5
-                }
-                // free(Data);
+                free(Data); // Free the original data after making a copy
             }
         } 
     }
 }
-
 
 
 void ProcessTask(void *pvParameters) {
@@ -577,7 +621,7 @@ bool listenForPing(HardwareSerial *serialPort) {
         listen = readFromSerial(*serialPort);  
         listen.trim();  
         
-        Serial.println("Listening for PING from " + serial_number + ": [" + listen + "]");  
+        // Serial.println("Listening for PING from " + serial_number + ": [" + listen + "]");  
 
         if (listen == "PING") {
             Serial.println("Received PING");
@@ -773,7 +817,7 @@ bool waitForAck(HardwareSerial *serialPort) {
             return true;
         }
         else {
-          Serial.println("Received Data after sending PING (waiitng for avaiable) from : " + serial_number  + receivedData);
+          // Serial.println("Received Data after sending PING (waiitng for avaiable) from : " + serial_number  + receivedData);
         }
     }
     Serial.println("did not respond in time.");
