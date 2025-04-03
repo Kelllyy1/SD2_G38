@@ -373,6 +373,20 @@ void setup() {
         Serial.println("jsonQueue created successfully.");
     }
 
+    send_node_5Queue = xQueueCreate(10, sizeof(char *)); 
+    if (send_node_5Queue == NULL) {
+        Serial.println("send_node_5Queue creation failed!");
+    } else {
+        Serial.println("send_node_5Queuecreated successfully.");
+    }
+
+    processing_Queue = xQueueCreate(10, sizeof(char *)); 
+    if (processing_Queue == NULL) {
+        Serial.println("processing_Queue creation failed!");
+    } else {
+        Serial.println("processing_Queue created successfully.");
+    }
+
     connectWiFi();
     // TOOD: This may be a problem, because I have to the time each time the data is sent; Consider placing in the Publish function to add to the "TimeInSeconds" attribute to the json object
     configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
@@ -389,6 +403,7 @@ void setup() {
     xTaskCreatePinnedToCore(listenForNode1Task, "ListenNode1", 4096, NULL, 1, &Task1Handle, 0); // Run on Core 0
     xTaskCreatePinnedToCore(ParseJsonTask, "Parse", 4096, NULL, 1, &Task3Handle, 0); // Run on Core 0
     xTaskCreatePinnedToCore(SendToNodesTask, "SendData9", 8192, NULL, 1, &Task2Handle, 1); // Run on Core 1
+    xTaskCreatePinnedToCore(ProcessTask, "ProcesData", 4096, NULL, 1, &Task8Handle, 1); // Run on Core 1
 }
 
 void loop() {
@@ -436,7 +451,7 @@ void listenForNode1Task(void *pvParameters) {
 
         if (xQueueSend(jsonQueue, &Data, portMAX_DELAY) == pdPASS) { // It's killing itself here
             if (uxQueueMessagesWaiting(jsonQueue) == 1) {  // Notify only for first message
-                xTaskNotifyGive(Task2Handle);
+                xTaskNotifyGive(Task3Handle);
             }
         } else {
             Serial.println("Queue full! Data not sent.");
@@ -460,9 +475,9 @@ void SendToNodesTask(void *pvParameters) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);  // Wait for a notification to begin processing
         Serial.println("Reached after task");
 
-        while (uxQueueMessagesWaiting(jsonQueue) > 0) {  // Process all messages
+        while (uxQueueMessagesWaiting(send_node_5Queue) > 0) {  // Process all messages
             char *DataSend;
-            if (xQueueReceive(jsonQueue, &DataSend, portMAX_DELAY) == pdTRUE) {
+            if (xQueueReceive(send_node_5Queue, &DataSend, portMAX_DELAY) == pdTRUE) {
                 if (xSemaphoreTake(semaphore, portMAX_DELAY) == pdTRUE) {  // Acquire semaphore
 
                     StaticJsonDocument<3072> message;
@@ -484,6 +499,39 @@ void SendToNodesTask(void *pvParameters) {
                 } 
             }
         }
+    }
+}
+
+void ParseTask(void *pvParameters) {
+    SemaphoreHandle_t semaphore;
+    semaphore = serial2Semaphore;
+
+    while (true) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY); 
+
+        if (uxQueueMessagesWaiting(jsonQueue) > 0) {  // Check if JSON queue has messages
+            char *Data;
+            if (xQueueReceive(jsonQueue, &Data, portMAX_DELAY) == pdTRUE) {
+                int deviceID = DeviceID(Data);
+                if (deviceID == NODE_ID) {
+                    // Try adding to processing queue
+                    if (xQueueSend(processing_Queue, &Data, 50 / portTICK_PERIOD_MS) == pdTRUE) {
+               
+                        xTaskNotifyGive(Task8Handle); // process it
+
+                    } 
+                    else {
+                        Serial.println("Processing queue full");
+                    }
+                }
+                else {
+
+                        xQueueSend(send_node_5Queue, &Data, 50 / portTICK_PERIOD_MS);
+                        xTaskNotifyGive(Task2Handle); // send to node 5
+                }
+                // free(Data);
+            }
+        } 
     }
 }
 
