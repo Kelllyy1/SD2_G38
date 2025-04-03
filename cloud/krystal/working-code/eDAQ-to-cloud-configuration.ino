@@ -401,7 +401,7 @@ void setup() {
     client.onMessage(messageHandler);
     // Create FreeRTOS tasks
     xTaskCreatePinnedToCore(listenForNode1Task, "ListenNode1", 4096, NULL, 1, &Task1Handle, 0); // Run on Core 0
-    xTaskCreatePinnedToCore(ParseJsonTask, "Parse", 4096, NULL, 1, &Task3Handle, 0); // Run on Core 0
+    xTaskCreatePinnedToCore(ParseTask, "Parse", 4096, NULL, 1, &Task3Handle, 0); // Run on Core 0
     xTaskCreatePinnedToCore(SendToNodesTask, "SendData9", 8192, NULL, 1, &Task2Handle, 1); // Run on Core 1
     xTaskCreatePinnedToCore(ProcessTask, "ProcesData", 4096, NULL, 1, &Task8Handle, 1); // Run on Core 1
 }
