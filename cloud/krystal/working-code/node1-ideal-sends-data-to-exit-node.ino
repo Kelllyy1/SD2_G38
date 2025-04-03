@@ -622,7 +622,7 @@ String createBatteryJson2() {
 
     doc["rack_id"] = "R002";
     doc["module_id"] = "M001";
-    doc["deviceID"] = 9;
+    doc["deviceID"] = 1;
 
     JsonArray cells = doc.createNestedArray("cells");
     const char* ids[] = {"B001-R001-M001-C001", "B001-R001-M001-C002", "B001-R001-M001-C003", "B001-R001-M001-C004", "B001-R001-M001-C005", 
