@@ -81,7 +81,7 @@ void setup() {
     client.onMessage(messageHandler);
     // Create FreeRTOS tasks
     xTaskCreatePinnedToCore(listenForNode1Task, "ListenNode1", 4096, NULL, 1, &Task1Handle, 0); // Run on Core 0
-    // xTaskCreatePinnedToCore(ParseJsonTask, "Parse", 4096, NULL, 1, &Task3Handle, 0); // Run on Core 0
+    xTaskCreatePinnedToCore(ParseJsonTask, "Parse", 4096, NULL, 1, &Task3Handle, 0); // Run on Core 0
     xTaskCreatePinnedToCore(SendToNodesTask, "SendData9", 8192, NULL, 1, &Task2Handle, 1); // Run on Core 1
 }
 
@@ -181,6 +181,74 @@ void SendToNodesTask(void *pvParameters) {
     }
 }
 
+void ProcessTask(void *pvParameters) {
+    while (true) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+        if (uxQueueMessagesWaiting(processing_Queue) > 0) {
+            char *Data;
+            if (xQueueReceive(processing_Queue, &Data, portMAX_DELAY) == pdTRUE) {
+              StaticJsonDocument<1024> doc;
+              DeserializationError error = deserializeJson(doc, Data);
+
+              if (error) {
+                  Serial.print("JSON Parse Error: ");
+                  Serial.println(error.c_str());
+                  
+              }
+
+              JsonArray cells = doc["cells"];
+              float totalVoltage = 0, totalCurrent = 0, totalTemperature = 0;
+              const char* faultList[10];
+
+              for (int i = 0; i < cells.size(); i++) {
+                  totalVoltage += cells[i]["voltage"].as<float>();
+                  totalCurrent += cells[i]["current"].as<float>();
+                  totalTemperature += cells[i]["temperature"].as<float>();
+                  faultList[i] = cells[i]["faults"].as<const char*>();
+              }
+
+              float avgVoltage = totalVoltage / cells.size();
+              float avgCurrent = totalCurrent / cells.size();
+              float avgTemperature = totalTemperature / cells.size();
+              const char* commonFault = mostCommonFault(faultList, cells.size());
+
+              // Create new JSON
+              StaticJsonDocument<256> summaryDoc;
+              summaryDoc["rack_id"] = doc["rack_id"];
+              summaryDoc["module_id"] = doc["module_id"];
+              summaryDoc["deviceID"] = doc["deviceID"];
+              summaryDoc["avg_voltage"] = avgVoltage;
+              summaryDoc["avg_current"] = avgCurrent;
+              summaryDoc["avg_temperature"] = avgTemperature;
+              summaryDoc["most_common_fault"] = commonFault;
+
+              String output;
+              serializeJson(summaryDoc, output);
+
+              // Copy output into a dynamically allocated char array for queue safety
+              char* jsonCopy = (char*)pvPortMalloc(output.length() + 1);
+              if (jsonCopy != NULL) {
+                  strcpy(jsonCopy, output.c_str());
+
+                  if (xQueueSend(send_node_5Queue, &jsonCopy, 50 / portTICK_PERIOD_MS) == pdPASS) {
+                      if (uxQueueMessagesWaiting(send_node_5Queue) == 1) {  // Notify only for first message
+                          xTaskNotifyGive(Task2Handle); // Notify send_to_node_5 task
+                      }
+                  } else {
+                      Serial.println("send_node_5Queue full! Data not sent.");
+                      vPortFree(jsonCopy);  // Prevent memory leak
+                  }
+              } else {
+                  Serial.println("Memory allocation failed!");
+              }
+
+              Serial.println("Processed JSON: \n" + output);
+              free(Data);
+          }
+        }
+    }
+}
 
 int RouteData(String json) {
   // Added debug message to determine if JSON data is valid -Krystal
