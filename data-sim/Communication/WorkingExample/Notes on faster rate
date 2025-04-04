@@ -1,0 +1,8 @@
+
+
+{"rack_id": "R001", "module_id": "M001", "deviceID": 1, "cells": [{"id": "B001-R001-M001-C001", "voltage": 2.7, "current": 2.373, "temperature": 23.605, "status": "Normal", "faults": "Normal"}, {"id": "B001-R001-M001-C002", "voltage": 2.7, "current": 2.758, "temperature": 26.501, "status": "Compromised", "faults": "Overdischarge"}, {"id": "B001-R001-M001-C003", "voltage": 2.7, "current": 4.558, "temperature": 24.344, "status": "Compromised", "faults": "Overheating"}, {"
+Received from ESP32 on COM7: id": "B001-R001-M001-C004", "voltage": 2.7, "current": 4.015, "temperature": 25.264, "status": "Compromised", "faults": "Overheating"}, {"id": "B001-R001-M001-C005", "voltage": 2.7, "current": 2.049, "temperature": 26.65, "status": "Compromised", "faults": "Overcurrent"}, {"id": "B001-R001-M001-C006", "voltage": 2.7, "current": 4.377, "temperature": 23.192, "status": "Compromised", "faults": "Thermal_runaway"}, {"id": "B001-R001-M001-C007", "voltage": 2.7, "current": 3.684, "temperature": 23.086, "status": "Compromised", "faults": "Overdischarge"}, {"id": "B001-R001-M001-C008", "voltage": 2.7, "current": 2.876, "temperature": 24.905, "status": "Compromised", "faults": "Overheating"}, {"id": "B001-R001-M001-C009", "voltage": 2.7, "current": 3.962, "temperature": 25.97, "status": "Normal", "faults": "Normal"}, {"id": "B001-R001-M001-C010", "voltage": 2.7, "current": 3.09, "temperature": 24.835, "status": "Compromised", "faults": "Overcharge"}]}
+
+----
+
+In this case all of the data makes it, just not whole. Some concerns with with threading.
