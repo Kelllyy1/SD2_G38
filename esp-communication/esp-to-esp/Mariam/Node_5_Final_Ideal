@@ -74,12 +74,12 @@ void setup() {
 
     i2cuart.begin(SC16IS752_DEFAULT_SPEED, SC16IS752_DEFAULT_SPEED); 
 
-    if (i2cuart.ping()!=1) {
-        Serial.println("Device not found");
-        while(1);
-    } else {
-        Serial.println("Device found");
-    }
+    // if (i2cuart.ping()!=1) {
+    //     Serial.println("Device not found");
+    //     while(1);
+    // } else {
+    //     Serial.println("Device found");
+    // }
     jsonQueue = xQueueCreate(10, sizeof(char *)); 
     if (jsonQueue == NULL) {
         Serial.println("Queue creation failed!");
