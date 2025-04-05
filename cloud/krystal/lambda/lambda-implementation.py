@@ -1,7 +1,7 @@
-# Iteration 1
+# Iteration 2
 # Partly works
 
-# Sends the correct value to the Module model, but currently not the Cell module; working to fix that part
+# Sends the correct value to the Module model and the Cell model, but currently does not send to the Cell model dynamically; working ot fix that part
 import json
 import boto3
 from math import ceil
@@ -34,10 +34,6 @@ INTEGER_KEYS = {
     "fault_overheating"
 }
 
-def extract_cell_suffix(cell_id):
-    parts = cell_id.split("-")
-    return parts[-1] if len(parts) == 4 else None
-
 def lambda_handler(event, context):
     try:
         payload = json.loads(event.get("body", json.dumps(event)))
@@ -49,7 +45,6 @@ def lambda_handler(event, context):
         stats = payload.get("statistics", {})
         fault_counts = stats.get("fault_counts", {})
 
-        # Regular module stats
         for key in ["normal_cells", "total_cells", "compromised_cells", "average_voltage", "average_temperature", "average_current"]:
             value = stats.get(key)
             if value is not None and key in MODULE_ALIAS_MAP:
@@ -64,7 +59,6 @@ def lambda_handler(event, context):
                     }]
                 })
 
-        # Mapped fault count keys to SiteWise names
         fault_mapping = {
             "Normal": "fault_count_normal",
             "Over_current": "fault_over_current",
@@ -87,15 +81,16 @@ def lambda_handler(event, context):
 
         # ─── COMPROMISED CELLS ─────────────────────────────────────
         for cell in payload.get("compromised_cells", []):
-            cell_id = cell.get("id")
-            suffix = extract_cell_suffix(cell_id)
-            if not suffix:
-                print(f"Skipping invalid cell ID: {cell_id}")
+            raw_id = cell.get("id", "")
+            cell_parts = raw_id.split("-")
+            cell_suffix = cell_parts[-1] if len(cell_parts) == 4 else None
+
+            if not cell_suffix:
+                print(f"Skipping invalid cell ID: {raw_id}")
                 continue
 
-            asset_name = f"Cell-{suffix}"
+            asset_name = f"Cell-{cell_suffix.zfill(3)}"  # Ex: C004 → Cell-C004
 
-            # Numeric measurements
             for field in ["voltage", "curr", "temperature"]:
                 if field in cell:
                     entries.append({
@@ -108,7 +103,6 @@ def lambda_handler(event, context):
                         }]
                     })
 
-            # Boolean for is_compromised
             is_compromised = str(cell.get("status", "")).strip().lower() == "compromised"
             entries.append({
                 "entryId": f"{asset_name}-is_compromised",
@@ -120,7 +114,6 @@ def lambda_handler(event, context):
                 }]
             })
 
-            # String fields
             for field in ["status", "faults", "id"]:
                 if field in cell:
                     entries.append({
