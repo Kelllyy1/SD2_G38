@@ -155,6 +155,12 @@ int i = 0;
 void listenForNodesTask(void *pvParameters) {
     while (true) {
         String tempData = ReadFromSimulator();  // Read dynamic data from simulator
+        
+// tempData.trim();
+// if (tempData.length() == 0) {
+//     Serial.println("Received empty data. Skipping.");
+//     continue;
+// }
 
         // Check if the data is complete
         if (tempData.length() > 0) {
@@ -178,7 +184,7 @@ void listenForNodesTask(void *pvParameters) {
         }
 
         // Wait before trying to send the next data
-        vTaskDelay(500 / portTICK_PERIOD_MS);  // 500 ms between messages
+        vTaskDelay(20 / portTICK_PERIOD_MS);  // 500 ms between messages
     }
 }
 
@@ -645,24 +651,31 @@ int DeviceID(String json) {
 }
 
 String ReadFromSimulator() {
-    static String buffer = "";  // Static buffer to accumulate data
+    static String buffer = "";
     String jsonData = "";
 
-    // Keep reading the serial buffer until we get the complete message
     while (Serial.available() > 0) {
-        char incomingChar = (char)Serial.read();  // Read one byte at a time
-        buffer += incomingChar;  // Accumulate characters in the buffer
+        char incomingChar = (char)Serial.read();
+        buffer += incomingChar;
 
-        // Check for a complete message (i.e., when a newline is encountered)
-        if (incomingChar == '\n') {  // Assuming \n marks the end of a message
-            jsonData = buffer;  // Set jsonData to the full message
-            buffer = "";  // Reset buffer for the next message
+        if (incomingChar == '\n') {
+            jsonData = buffer;
+            buffer = "";
+
+            jsonData.trim();  // Remove whitespace
+
+            if (jsonData.length() == 0) {
+                return "";  // Skip empty message
+            }
+
+            Serial.println(jsonData);  // Only print if it's not empty
+            return jsonData;
         }
     }
-    Serial.println(jsonData);
-    // Return the complete message (if any) or an empty string if the message is not complete
-    return jsonData;
+
+    return "";  // Still waiting for newline
 }
+
 
 
 
