@@ -158,27 +158,28 @@ void listenForNodesTask(void *pvParameters) {
         for (int j = 0; j < 4; j++) {
             String tempData;
 
-            // if (i == 0) {
-            //     Serial.println("Start of 5 seconds \n\n\n\n\n\n\n");
-            //     tempData = createBatteryJson1();
-            //     i++;
-            // } else if (i == 1) {
-            //     tempData = createBatteryJson2();
-            //     i++;
-            // } else if (i == 2) {
-            //     tempData = createBatteryJson3();
-            //     i++;
-            // } else if (i == 3) {
-            //     tempData = createBatteryJson4();
-            //     i = 0;
-            // }
+            if (i == 0) {
+                Serial.println("Start of 5 seconds \n\n\n\n\n\n\n");
+                tempData = createBatteryJson1();
+                i++;
+            } else if (i == 1) {
+                tempData = createBatteryJson2();
+                i++;
+            } else if (i == 2) {
+                tempData = createBatteryJson3();
+                i++;
+            } else if (i == 3) {
+                tempData = createBatteryJson4();
+                i = 0;
+            }
 
-            tempData = ReadFromSimulator();
+            // tempData = ReadFromSimulator();
             // Allocate memory dynamically
             char *Data = strdup(tempData.c_str());
 
             if (Data == NULL) {
                 Serial.println("Memory allocation failed for listenForNodesTask!");
+                free(Data);
                 continue;
             }
 
@@ -195,7 +196,7 @@ void listenForNodesTask(void *pvParameters) {
         }
 
         // vTaskDelay(8000 / portTICK_PERIOD_MS);  // Wait to complete 5s total
-        vTaskDelay(16000 / portTICK_PERIOD_MS);  // Wait to complete 5s total
+        vTaskDelay(3500/ portTICK_PERIOD_MS);  // Wait to complete 5s total
     }
 }
 
@@ -239,6 +240,7 @@ void listenForDownNodeTask(void *pvParameters) {
 
         if (Data == NULL) {
             Serial.println("Memory allocation failed for listenfor node2 task!");
+            free(Data);
             continue; // Skip sending if allocation failed
         }
 
@@ -294,12 +296,14 @@ void SendToRightNodeTask(void *pvParameters) {
                     if (DataCopy == NULL) {
                         Serial.println("Memory allocation failed for datacopy in send to right node task!");
                         free(DataSend); 
+                        free(DataCopy);
                         continue;   
                     }
                     bool ack = waitForAck(&serial);
 
                     if (ack) {
-                        Serial2.println(DataSend);
+                        serial.println(DataSend);
+                        free(DataCopy);
                         Serial.println("Sent JSON to " + serial_name+ ": \n" + String(DataSend));
                         
                     } else {
@@ -349,17 +353,19 @@ void RetrySendRightNodeTask(void *pvParameters) {
                     if (DataCopy == NULL) {
                         Serial.println("Memory allocation failed for datacopy in send to retry right node task!");
                         free(retryData); 
+                        free(DataCopy);
                         continue;   
                     }
                     bool ack = waitForAck(&serial);
 
                     if (ack) {
-                        Serial2.println(retryData);
+                        serial.println(retryData);
+                        free(DataCopy);
                         Serial.println("Resent JSON to " + serial_name+ "\n" + String(retryData));
                         // free(retryData);
                     } else {
                         Serial.println("Resend failed to " + serial_name+ ", sending to node down queue");
-                            if (xQueueSend(SEND_QUEUE_NAME(NODE_DOWN), &DataCopy, 50 / portTICK_PERIOD_MS) != pdTRUE) {
+                        if (xQueueSend(SEND_QUEUE_NAME(NODE_DOWN), &DataCopy, 50 / portTICK_PERIOD_MS) != pdTRUE) {
                             Serial.println("Failed to send to down queue for right node retry. Message lost meant for " + serial_name);
                             free(DataCopy);
                         } else {
@@ -407,12 +413,14 @@ void SendToDownNodeTask(void *pvParameters) {
                     if (DataCopy == NULL) {
                         Serial.println("Memory allocation failed for datacopy in send to right node task!");
                         free(DataSend); 
+                        free(DataCopy);
                         continue;   
                     }
                     bool ack = waitForAck(&serial);
 
                     if (ack) {
-                        Serial2.println(DataSend);
+                        serial.println(DataSend);
+                        free(DataCopy);
                         Serial.println("Sent JSON to " + serial_name+ ": \n" + String(DataSend));
                         
                     } else {
@@ -454,14 +462,14 @@ void RetrySendDownNodeTask(void *pvParameters) {
                     bool ack = waitForAck(&serial);
 
                     if (ack) {
-                        Serial2.println(retryData);
+                        serial.println(retryData);
                         Serial.println("Resent JSON to " + serial_name+ "\n" + String(retryData));
                         free(retryData);
                     } else {
                         Serial.println("Resend failed to " + serial_name+ ", keeping in retry queue.");
-                        xQueueSend(RETRY_QUEUE_NAME(NODE_DOWN), &retryData, 50 / portTICK_PERIOD_MS);
+                        // xQueueSend(RETRY_QUEUE_NAME(NODE_DOWN), &retryData, 50 / portTICK_PERIOD_MS);
                     }
-                  
+                    free(retryData);
                     xSemaphoreGive(semaphore);  // Release semaphore
                     vTaskDelay(100 / portTICK_PERIOD_MS); 
                 } 
@@ -479,6 +487,8 @@ void ParseTask(void *pvParameters) {
 
     while (true) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY); 
+        Serial.print("Free memory ");
+        Serial.println(ESP.getFreeHeap());
 
         if (uxQueueMessagesWaiting(jsonQueue) > 0) {  // Check if JSON queue has messages
             char *Data;
@@ -992,4 +1002,3 @@ bool peekOldestData(QueueHandle_t queue, char *buffer, size_t bufferSize) {
         return false;
     }
 }
-
