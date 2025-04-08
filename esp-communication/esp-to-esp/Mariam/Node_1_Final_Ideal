@@ -195,8 +195,8 @@ void listenForNodesTask(void *pvParameters) {
             vTaskDelay(500 / portTICK_PERIOD_MS);  // 500 ms between messages
         }
 
-        // vTaskDelay(8000 / portTICK_PERIOD_MS);  // Wait to complete 5s total
-        vTaskDelay(3500/ portTICK_PERIOD_MS);  // Wait to complete 5s total
+        vTaskDelay(8000 / portTICK_PERIOD_MS);  // Wait to complete 5s total
+        // vTaskDelay(3500/ portTICK_PERIOD_MS);  // Wait to complete 5s total
     }
 }
 
@@ -302,7 +302,7 @@ void SendToRightNodeTask(void *pvParameters) {
                     bool ack = waitForAck(&serial);
 
                     if (ack) {
-                        serial.println(DataSend);
+                        WriteFromUART(&serial, DataSend);
                         free(DataCopy);
                         Serial.println("Sent JSON to " + serial_name+ ": \n" + String(DataSend));
                         
@@ -359,7 +359,7 @@ void RetrySendRightNodeTask(void *pvParameters) {
                     bool ack = waitForAck(&serial);
 
                     if (ack) {
-                        serial.println(retryData);
+                        WriteFromUART(&serial, retryData);
                         free(DataCopy);
                         Serial.println("Resent JSON to " + serial_name+ "\n" + String(retryData));
                         // free(retryData);
@@ -419,7 +419,7 @@ void SendToDownNodeTask(void *pvParameters) {
                     bool ack = waitForAck(&serial);
 
                     if (ack) {
-                        serial.println(DataSend);
+                        WriteFromUART(&serial, DataSend);
                         free(DataCopy);
                         Serial.println("Sent JSON to " + serial_name+ ": \n" + String(DataSend));
                         
@@ -462,7 +462,7 @@ void RetrySendDownNodeTask(void *pvParameters) {
                     bool ack = waitForAck(&serial);
 
                     if (ack) {
-                        serial.println(retryData);
+                        WriteFromUART(&serial, retryData);
                         Serial.println("Resent JSON to " + serial_name+ "\n" + String(retryData));
                         free(retryData);
                     } else {
@@ -499,6 +499,7 @@ void ParseTask(void *pvParameters) {
                 char *DataCopy = strdup(Data);
                 if (DataCopy == NULL) {
                     Serial.println("Memory allocation failed for parsetask!");
+                    free(DataCopy);
                     free(Data); // Free the original data since it's no longer needed
                     continue;   // Skip this iteration
                 }
@@ -560,10 +561,11 @@ void ProcessTask(void *pvParameters) {
                         }
                     } else {
                         Serial.println("Send queue full! Couldn't forward processed JSON.");
-                        vPortFree(jsonCopy);
+                        free(jsonCopy);
                       }
                   } else {
                         Serial.println("Memory allocation failed while forwarding processed JSON!");
+                        free(jsonCopy);
                     }
 
                   free(Data);
@@ -642,10 +644,11 @@ void ProcessTask(void *pvParameters) {
                         }
                     } else {
                         Serial.println("send node right full! Data not sent.");
-                        vPortFree(jsonCopy);  // Prevent memory leak
+                        free(jsonCopy);  // Prevent memory leak
                     }
                 } else {
                     Serial.println("Memory allocation failed for processing function!");
+                    free(jsonCopy);
                 }
 
                 Serial.println("Processed JSON: \n" + output);
@@ -712,7 +715,8 @@ String WaitForData(HardwareSerial &serial) {
 
     unsigned long startTime = millis();  // Record the start time
     while (true) {
-    listen = readFromSerial(serial); 
+    WriteFromUART(&serial, "Available");
+    listen = ReadFromUART(&serial); 
     if (listen != "PING" && listen != "") {
         Serial.println("Did not receive PING, instead received: " + listen + "from " + serial_number);
         receivedJsonSerial = listen;
@@ -750,14 +754,14 @@ bool listenForPing(HardwareSerial *serialPort) {
     
     
     while (millis() - startTime < LISTEN_TIMEOUT) {  
-        listen = readFromSerial(*serialPort);  
+        listen = ReadFromUART(serialPort);  
         listen.trim();  
         
         // Serial.println("Listening for PING from " + serial_number + ": [" + listen + "]");  
 
         if (listen == "PING") {
             Serial.println("Received PING");
-            serialPort->println("Available");  
+            WriteFromUART(serialPort, "Available");
 
             
             return true;  
@@ -970,9 +974,9 @@ bool waitForAck(HardwareSerial *serialPort) {
     unsigned long startTime = millis();
     // Serial.println("Sent: PING to " + serial_number);
     while (millis() - startTime < ACK_TIMEOUT) {
-        serialPort->println("PING");
+        WriteFromUART(serialPort, "PING");
         vTaskDelay(20 / portTICK_PERIOD_MS); 
-        String receivedData = readFromSerial(*serialPort);
+        String receivedData = ReadFromUART(serialPort);
         if (receivedData == "Available") {
             Serial.println("responded with available: ");
             return true;
@@ -1002,3 +1006,75 @@ bool peekOldestData(QueueHandle_t queue, char *buffer, size_t bufferSize) {
         return false;
     }
 }
+
+
+String ReadFromUART(HardwareSerial *serialPort) {
+    String receivedData = "";
+    bool messageStarted = false;
+    unsigned long startTime = millis();
+    const unsigned long timeout = 2000;  // 2 seconds max
+
+    while (millis() - startTime < timeout) {
+        if (serialPort->available()) {
+            char c = serialPort->read();
+            startTime = millis();  // Reset timeout on activity
+
+            if (c == '<') {
+                receivedData = "";
+                messageStarted = true;
+                Serial.println("Received starter:");
+                continue;
+            }
+
+            if (messageStarted) {
+                if (c == '>') {
+                    Serial.println("Received ender:");
+                    Serial.println("Returning " + receivedData);
+                    return receivedData;
+                }
+                receivedData += c;
+            }
+        } else {
+            delay(2);  // Small wait before checking again
+        }
+    }
+
+    Serial.println("Timeout waiting for complete message!");
+    return "";  // Timeout or no complete message
+}
+
+void WriteFromUART(HardwareSerial *serial, const char *input) {
+    uint16_t length = strlen(input);
+    // Serial.println(String(input));
+
+    const uint16_t maxChunkSize = 64;
+    uint16_t numChunks = (length + maxChunkSize - 1) / maxChunkSize;
+    // Serial.println("Total length: " + String(length) + ", Number of chunks: " + String(numChunks));
+
+    for (uint16_t chunk = 0; chunk < numChunks; chunk++) {
+        uint16_t startIdx = chunk * maxChunkSize;
+        uint16_t endIdx = (chunk + 1) * maxChunkSize;
+        if (endIdx > length) {
+            endIdx = length;
+        }
+
+        uint16_t chunkLength = endIdx - startIdx;
+        // Serial.println("Chunk " + String(chunk) + " startIdx: " + String(startIdx) + " endIdx: " + String(endIdx) + " chunkLength: " + String(chunkLength));
+
+        if (chunk == 0) {
+            serial->write('<');  // Use -> for pointer access
+        }
+
+        for (uint16_t i = startIdx; i < endIdx; i++) {
+            serial->write(input[i]);
+            // Serial.println("Sending byte: " + String(input[i]));
+        }
+
+        if (chunk == numChunks - 1) {
+            serial->write('>');
+        }
+
+        delay(10); // Optional delay
+    }
+}
+
