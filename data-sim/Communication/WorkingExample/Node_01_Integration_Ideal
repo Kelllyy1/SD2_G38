@@ -965,7 +965,7 @@ bool waitForAck(HardwareSerial *serialPort) {
           // Serial.println("Received Data after sending PING (waiitng for avaiable) from : " + serial_number  + receivedData);
         }
     }
-    Serial.println("did not respond in time.");
+    //Serial.println("did not respond in time.");
     return false;
 }
 
