@@ -6,7 +6,7 @@
 #include "freertos/semphr.h"
 #include <map>
 
-#define NODE_ID 14  // This node's ID
+#define NODE_ID 13  // This node's ID
 #define ACK_TIMEOUT 500  // Timeout for acknowledgment (ms)
 #define LISTEN_TIMEOUT 500  
 #define WAITFORDATA_TIMEOUT 500  
