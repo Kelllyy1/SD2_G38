@@ -154,36 +154,74 @@ void loop() {
 int i = 0;
 
 
+// void listenForNodesTask(void *pvParameters) {
+//     while (true) {
+//         for (int j = 0; j < 4; j++) {
+//             String tempData;
+
+//             if (i == 0) {
+//                 Serial.println("Start of 5 seconds \n\n\n\n\n\n\n");
+//                 tempData = createBatteryJson1();
+//                 i++;
+//             } else if (i == 1) {
+//                 tempData = createBatteryJson2();
+//                 i++;
+//             } else if (i == 2) {
+//                 tempData = createBatteryJson3();
+//                 i++;
+//             } else if (i == 3) {
+//                 tempData = createBatteryJson4();
+//                 i = 0;
+//             }
+
+//             // tempData = ReadFromSimulator();
+//             // Allocate memory dynamically
+//             char *Data = strdup(tempData.c_str());
+
+//             if (Data == NULL) {
+//                 Serial.println("Memory allocation failed for listenForNodesTask!");
+//                 free(Data);
+//                 continue;
+//             }
+
+//             if (xQueueSend(jsonQueue, &Data, 50 / portTICK_PERIOD_MS) == pdPASS) {
+//                 if (uxQueueMessagesWaiting(jsonQueue) == 1) {
+//                     xTaskNotifyGive(Task5Handle);
+//                 }
+//             } else {
+//                 Serial.println("jsonQueue full! Data not sent.");
+//                 free(Data);
+//             }
+
+//             vTaskDelay(500 / portTICK_PERIOD_MS);  // 500 ms between messages
+//         }
+
+//         vTaskDelay(8000 / portTICK_PERIOD_MS);  // Wait to complete 5s total
+//         // vTaskDelay(3500/ portTICK_PERIOD_MS);  // Wait to complete 5s total
+//     }
+// }
+
 void listenForNodesTask(void *pvParameters) {
     while (true) {
-        for (int j = 0; j < 4; j++) {
-            String tempData;
+        String tempData = ReadFromSimulator();  // Read dynamic data from simulator
+        
+// tempData.trim();
+// if (tempData.length() == 0) {
+//     Serial.println("Received empty data. Skipping.");
+//     continue;
+// }
 
-            if (i == 0) {
-                Serial.println("Start of 5 seconds \n\n\n\n\n\n\n");
-                tempData = createBatteryJson1();
-                i++;
-            } else if (i == 1) {
-                tempData = createBatteryJson2();
-                i++;
-            } else if (i == 2) {
-                tempData = createBatteryJson3();
-                i++;
-            } else if (i == 3) {
-                tempData = createBatteryJson4();
-                i = 0;
-            }
-
-            // tempData = ReadFromSimulator();
-            // Allocate memory dynamically
+        // Check if the data is complete
+        if (tempData.length() > 0) {
+            // Allocate memory dynamically only after ensuring the data is complete
             char *Data = strdup(tempData.c_str());
 
             if (Data == NULL) {
                 Serial.println("Memory allocation failed for listenForNodesTask!");
-                free(Data);
                 continue;
             }
 
+            // Send the complete JSON data to the queue
             if (xQueueSend(jsonQueue, &Data, 50 / portTICK_PERIOD_MS) == pdPASS) {
                 if (uxQueueMessagesWaiting(jsonQueue) == 1) {
                     xTaskNotifyGive(Task5Handle);
@@ -192,12 +230,10 @@ void listenForNodesTask(void *pvParameters) {
                 Serial.println("jsonQueue full! Data not sent.");
                 free(Data);
             }
-
-            vTaskDelay(500 / portTICK_PERIOD_MS);  // 500 ms between messages
         }
 
-        vTaskDelay(8000 / portTICK_PERIOD_MS);  // Wait to complete 5s total
-        // vTaskDelay(3500/ portTICK_PERIOD_MS);  // Wait to complete 5s total
+        // Wait before trying to send the next data
+        vTaskDelay(20 / portTICK_PERIOD_MS);  // 500 ms between messages
     }
 }
 
@@ -685,25 +721,53 @@ int DeviceID(String json) {
     }
 }
 
+// String ReadFromSimulator() {
+//     static String buffer = "";  // Static buffer to hold partial data between function calls
+//     String jsonData = "";
+
+//     // Keep reading the buffer until it's empty
+//     while (Serial.available() > 0) {
+//         char incomingChar = (char)Serial.read();  // Read one byte at a time
+//         buffer += incomingChar;  // Append it to the buffer
+
+//         // Check if we've received a complete line (i.e., contains a newline character)
+//         if (incomingChar == '\n') {
+//             jsonData = buffer;  // Set jsonData to the full message
+//             buffer = "";  // Reset the buffer for the next message
+//         }
+//     }
+
+//     // Return the complete message (if any) or an empty string
+//     return jsonData;
+// }
+
 String ReadFromSimulator() {
-    static String buffer = "";  // Static buffer to hold partial data between function calls
+    static String buffer = "";
     String jsonData = "";
 
-    // Keep reading the buffer until it's empty
     while (Serial.available() > 0) {
-        char incomingChar = (char)Serial.read();  // Read one byte at a time
-        buffer += incomingChar;  // Append it to the buffer
+        char incomingChar = (char)Serial.read();
+        buffer += incomingChar;
 
-        // Check if we've received a complete line (i.e., contains a newline character)
         if (incomingChar == '\n') {
-            jsonData = buffer;  // Set jsonData to the full message
-            buffer = "";  // Reset the buffer for the next message
+            jsonData = buffer;
+            buffer = "";
+
+            jsonData.trim();  // Remove whitespace
+
+            if (jsonData.length() == 0) {
+                return "";  // Skip empty message
+            }
+
+            Serial.println(jsonData);  // Only print if it's not empty
+            return jsonData;
         }
     }
 
-    // Return the complete message (if any) or an empty string
-    return jsonData;
+    return "";  // Still waiting for newline
 }
+
+
 
 
 String WaitForData(HardwareSerial &serial) {
