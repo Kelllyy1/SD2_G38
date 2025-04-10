@@ -1,7 +1,7 @@
 
 #include <ArduinoJson.h>
 #include <Wire.h>
-#include "SC16IS752.h"
+// #include "SC16IS752.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include <map>
@@ -216,26 +216,28 @@ void SendToCloud(void *pvParameters) {
 
 
 
-    while (true) {
-        while (uxQueueMessagesWaiting(cloud_queue) > 0) {  // Check if retry queue has messages
-            char *cloud_data;
-            if (xQueueReceive(cloud_queue, &cloud_data, portMAX_DELAY) == pdTRUE) {
-              if (!client.connected()) {
-                Serial.println(" MQTT disconnected. Reconnecting...");
-                connectAWS();  // Reconnect only if disconnected
+      while (true) {
+          while (uxQueueMessagesWaiting(cloud_Queue) > 0) {  // Check if retry queue has messages
+              char *cloud_data;
+              if (xQueueReceive(cloud_Queue, &cloud_data, portMAX_DELAY) == pdTRUE) {
+                if (!client.connected()) {
+                  Serial.println(" MQTT disconnected. Reconnecting...");
+                  connectAWS();  // Reconnect only if disconnected
+                }
+                StaticJsonDocument<3072> message;
+                DeserializationError error = deserializeJson(message, cloud_data);
+
+                if (error) {
+                Serial.println("deserealization error from send to cloud task");
+        
+                publishMessage(message);
+                free(cloud_data);
+
               }
-              StaticJsonDocument<3072> message;
-              DeserializationError error = deserializeJson(message, cloud_data);
-
-              if (error) {
-              Serial.println("deserealization error from send to cloud task");
-       
-              publishMessage(message);
-
-            }
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-        } 
-    }
+              vTaskDelay(100 / portTICK_PERIOD_MS);
+          } 
+      }
+  }
 }
 
 
@@ -274,7 +276,7 @@ void ParseTask(void *pvParameters) {
                         free(DataCopy);  // Free if sending fails
                     }
                 } else {
-                    if (cloud_Queue, &DataCopy, 50 / portTICK_PERIOD_MS) == pdTRUE) {
+                    if ((cloud_Queue, &DataCopy, 50 / portTICK_PERIOD_MS) == pdTRUE) {
                         Serial.println("Sent data to send down right queue from parse task function");
                         // xTaskNotifyGive(Task2Handle); // Send to node 5
                     } else {
@@ -301,6 +303,9 @@ void ProcessTask(void *pvParameters) {
             char *Data;
             if (xQueueReceive(processing_Queue, &Data, portMAX_DELAY) == pdTRUE) {
                 StaticJsonDocument<2048> doc;
+
+                Serial.println(Data);  // This will print the JSON string before attempting to deserialize it
+
                 DeserializationError error = deserializeJson(doc, Data);
                 if (error) {
                     Serial.print("JSON Parse Error: ");
@@ -850,13 +855,15 @@ void WriteFromUART(HardwareSerial *serial, const char *input) {
 
         delay(10); // Optional delay
     }
+}
 
     String generateRandomID() {
-    char idBuffer[20];
-    snprintf(idBuffer, sizeof(idBuffer), "B%03d-R%03d-M%03d-C%03d",
-             random(1, 2), random(1, 2), random(1, 3), random(1, 3));
-    return String(idBuffer);
-}
+      char idBuffer[20];
+      snprintf(idBuffer, sizeof(idBuffer), "B%03d-R%03d-M%03d-C%03d",
+              random(1, 2), random(1, 2), random(1, 3), random(1, 3));
+      return String(idBuffer);
+    }
+
 
 // Function to connect ESP32 to Wi-Fi
 void connectWiFi() {
