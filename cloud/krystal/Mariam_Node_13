@@ -159,9 +159,9 @@ void listenForLeftNodeTask(void *pvParameters) {
 
     HardwareSerial *serialPort;
 
-    serialPort = &Serial1;
-    semaphore = &serial1Semaphore;
-    serial_number = "serial1";
+    serialPort = &Serial2;
+    semaphore = &serial2Semaphore;
+    serial_number = "serial2";
     while (true) {
 
     
