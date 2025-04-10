@@ -1,3 +1,4 @@
+
 #include <ArduinoJson.h>
 #include <Wire.h>
 // #include "SC16IS752.h"
@@ -219,6 +220,7 @@ void SendToCloud(void *pvParameters) {
           while (uxQueueMessagesWaiting(cloud_Queue) > 0) {  // Check if retry queue has messages
               char *cloud_data;
               if (xQueueReceive(cloud_Queue, &cloud_data, portMAX_DELAY) == pdTRUE) {
+                Serial.println("In Send to cloud Task");
                 if (!client.connected()) {
                   Serial.println(" MQTT disconnected. Reconnecting...");
                   connectAWS();  // Reconnect only if disconnected
@@ -228,11 +230,10 @@ void SendToCloud(void *pvParameters) {
 
                 if (error) {
                 Serial.println("deserealization error from send to cloud task");
-        
+                }
+
                 publishMessage(message);
                 free(cloud_data);
-
-              }
               vTaskDelay(100 / portTICK_PERIOD_MS);
           } 
       }
