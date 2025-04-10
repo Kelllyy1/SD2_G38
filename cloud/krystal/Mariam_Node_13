@@ -217,7 +217,9 @@ void SendToCloud(void *pvParameters) {
 
 
       while (true) {
-        Serial.println("In Send to cloud Task");
+        // Serial.println("In Send to cloud Task");
+        Serial.println("does cloud queue have anythign?");
+        Serial.println(uxQueueMessagesWaiting(cloud_Queue));
           while (uxQueueMessagesWaiting(cloud_Queue) > 0) {  // Check if retry queue has messages
               Serial.println("passed first while");
               char *cloud_data;
