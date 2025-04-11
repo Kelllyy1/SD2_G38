@@ -213,9 +213,9 @@ void listenForLeftNodeTask(void *pvParameters) {
 
     HardwareSerial *serialPort;
 
-    serialPort = &Serial1;
-    semaphore = &serial1Semaphore;
-    serial_number = "serial1";
+    serialPort = &Serial2;
+    semaphore = &serial2Semaphore;
+    serial_number = "serial2";
     while (true) {
 
     
@@ -338,11 +338,11 @@ void SendToRightNodeTask(void *pvParameters) {
     SemaphoreHandle_t semaphore;
 
 
-    semaphore = serial2Semaphore;
+    semaphore = serial1Semaphore;
 
-    HardwareSerial &serial = Serial2;
+    HardwareSerial &serial = Serial1;
 
-    String serial_name = "Serial2";
+    String serial_name = "Serial1";
     
 
     while (true) {
@@ -407,10 +407,10 @@ void RetrySendRightNodeTask(void *pvParameters) {
     SemaphoreHandle_t semaphore;
 
 
-    semaphore = serial2Semaphore;
+    semaphore = serial1Semaphore;
     
-    HardwareSerial &serial = Serial2;
-    String serial_name = "Serial2";
+    HardwareSerial &serial = Serial1;
+    String serial_name = "Serial1";
 
     while (true) {
         if (uxQueueMessagesWaiting(RETRY_QUEUE_NAME(NODE_RIGHT)) > 0) {  // Check if retry queue has messages
@@ -675,7 +675,7 @@ void ProcessTask(void *pvParameters) {
                 JsonArray compromisedArray;
 
                 StaticJsonDocument<1024> summaryDoc;
-                summaryDoc["timeInSeconds"] = String(millis() / 1000);
+                summaryDoc["timeInSeconds"] = doc["timeInSeconds"];
                 summaryDoc["moduleID"] = doc["module_id"];
                 summaryDoc["deviceID"] = doc["deviceID"];
                 
@@ -1408,4 +1408,3 @@ void WriteFromUART(HardwareSerial *serial, const char *input) {
 
 //     return false;
 // }
-
