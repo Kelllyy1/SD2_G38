@@ -333,9 +333,9 @@ void ProcessTask(void *pvParameters) {
                   }
                   
 
-                  if (xQueueSend(SEND_QUEUE_NAME(NODE_RIGHT), &jsonCopy, 50 / portTICK_PERIOD_MS) == pdPASS) {
+                  if (xQueueSend(cloud_Queue, &jsonCopy, 50 / portTICK_PERIOD_MS) == pdPASS) {
                       Serial.println("Forwarded already processed JSON to send right node queue");
-                      if (uxQueueMessagesWaiting(SEND_QUEUE_NAME(NODE_RIGHT)) == 1) {
+                      if (uxQueueMessagesWaiting(cloud_Queue) == 1) {
                           xTaskNotifyGive(Task2Handle);
                       }
                   } else {
@@ -418,9 +418,9 @@ void ProcessTask(void *pvParameters) {
                   }
                   
 
-                  if (xQueueSend(SEND_QUEUE_NAME(NODE_RIGHT), &jsonCopy, 50 / portTICK_PERIOD_MS) == pdPASS) {
+                  if (cloud_Queue, &jsonCopy, 50 / portTICK_PERIOD_MS) == pdPASS) {
                       Serial.println("Forwarded already processed JSON to send right node queue");
-                      if (uxQueueMessagesWaiting(SEND_QUEUE_NAME(NODE_RIGHT)) == 1) {
+                      if (uxQueueMessagesWaiting(cloud_Queue) == 1) {
                           xTaskNotifyGive(Task2Handle);
                       }
                   } else {
