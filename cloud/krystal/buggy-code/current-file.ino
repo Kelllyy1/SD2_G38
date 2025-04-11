@@ -418,7 +418,7 @@ void ProcessTask(void *pvParameters) {
                   }
                   
 
-                  if (cloud_Queue, &jsonCopy, 50 / portTICK_PERIOD_MS) == pdPASS) {
+                  if (xQueueSend(cloud_Queue, &DataCopy, 500 / portTICK_PERIOD_MS) == pdTRUE){
                       Serial.println("Forwarded already processed JSON to send right node queue");
                       if (uxQueueMessagesWaiting(cloud_Queue) == 1) {
                           xTaskNotifyGive(Task2Handle);
