@@ -616,7 +616,7 @@ void ProcessTask(void *pvParameters) {
                 JsonArray compromisedArray;
 
                 StaticJsonDocument<1024> summaryDoc;
-                summaryDoc["timeInSeconds"] = String(millis() / 1000);
+                summaryDoc["timeInSeconds"] = doc["timeInSeconds"];
                 summaryDoc["moduleID"] = doc["module_id"];
                 summaryDoc["deviceID"] = doc["deviceID"];
                 
