@@ -281,11 +281,13 @@ void ParseTask(void *pvParameters) {
                         free(DataCopy);  // Free if sending fails
                     }
                 } else {
-                    if ((cloud_Queue, &DataCopy, 50 / portTICK_PERIOD_MS) == pdTRUE) {
+                    if ((cloud_Queue, &DataCopy, 500 / portTICK_PERIOD_MS) == pdTRUE) {
                         Serial.println("Sent data to send down right queue from parse task function");
                         // xTaskNotifyGive(Task2Handle); // Send to node 5
                     } else {
                         Serial.println("Send queue full!");
+                        Serial.print("Empty slots in cloud_Queue: ");
+                        Serial.println(uxQueueSpacesAvailable(cloud_Queue));
                         free(DataCopy);  // Free if sending fails
                     }
                  
