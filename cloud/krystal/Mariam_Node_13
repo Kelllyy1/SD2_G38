@@ -218,8 +218,8 @@ void SendToCloud(void *pvParameters) {
 
       while (true) {
         // Serial.println("In Send to cloud Task");
-        Serial.println("does cloud queue have anythign?");
-        Serial.println(uxQueueMessagesWaiting(cloud_Queue));
+        // Serial.println("does cloud queue have anythign?");
+        // Serial.println(uxQueueMessagesWaiting(cloud_Queue));
           while (uxQueueMessagesWaiting(cloud_Queue) > 0) {  // Check if retry queue has messages
               Serial.println("passed first while");
               char *cloud_data;
@@ -255,11 +255,10 @@ void ParseTask(void *pvParameters) {
     while (true) {
         // ulTaskNotifyTake(pdTRUE, portMAX_DELAY); 
 
-
+        // Serial.print("Free memory ");
+        // Serial.println(ESP.getFreeHeap());
 
         if (uxQueueMessagesWaiting(jsonQueue) > 0) {  // Check if JSON queue has messages
-                Serial.print("Free memory ");
-                Serial.println(ESP.getFreeHeap());
             char *Data;
             if (xQueueReceive(jsonQueue, &Data, portMAX_DELAY) == pdTRUE) {
                 int deviceID = DeviceID(Data);
