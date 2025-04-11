@@ -253,7 +253,7 @@ void ParseTask(void *pvParameters) {
 
 
     while (true) {
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY); 
+        // ulTaskNotifyTake(pdTRUE, portMAX_DELAY); 
 
         Serial.print("Free memory ");
         Serial.println(ESP.getFreeHeap());
