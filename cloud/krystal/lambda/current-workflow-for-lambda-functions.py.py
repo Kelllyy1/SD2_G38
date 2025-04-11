@@ -1,27 +1,9 @@
-# Iteration 2
-# Partly works
-
-# Sends the correct value to the Module model and the Cell model, but currently does not send to the Cell model dynamically; working ot fix that part
 import json
 import boto3
 from math import ceil
 
 client = boto3.client('iotsitewise')
 MAX_BATCH_SIZE = 10
-
-# These must match SiteWise property aliases exactly
-MODULE_ALIAS_MAP = {
-    "normal_cells": "Module001/normal_cells",
-    "total_cells": "Module001/total_cells",
-    "compromised_cells": "Module001/compromised_cells",
-    "average_voltage": "Module001/average_voltage",
-    "average_temperature": "Module001/average_temperature",
-    "average_current": "Module001/average_current",
-    "fault_count_normal": "Module001/fault_count_normal",
-    "fault_over_current": "Module001/fault_over_current",
-    "fault_over_discharge": "Module001/fault_over_discharge",
-    "fault_overheating": "Module001/fault_overheating"
-}
 
 # Keys expected to be integers (for SiteWise property data types)
 INTEGER_KEYS = {
@@ -41,6 +23,31 @@ def lambda_handler(event, context):
         quality = "GOOD"
         entries = []
 
+        # ─── EXTRACT MODULE ID DYNAMICALLY ─────────────────────────
+        compromised_cells = payload.get("compromised_cells", [])
+        default_module = "Module001"
+        module_id = default_module
+
+        if compromised_cells:
+            raw_id = compromised_cells[0].get("id", "")
+            parts = raw_id.split("-")
+            if len(parts) == 4:
+                module_id = f"Module{parts[2]}"  # e.g. M001 → ModuleM001
+
+        # ─── BUILD MODULE ALIAS MAP BASED ON DYNAMIC MODULE ID ─────
+        MODULE_ALIAS_MAP = {
+            "normal_cells": f"{module_id}/normal_cells",
+            "total_cells": f"{module_id}/total_cells",
+            "compromised_cells": f"{module_id}/compromised_cells",
+            "average_voltage": f"{module_id}/average_voltage",
+            "average_temperature": f"{module_id}/average_temperature",
+            "average_current": f"{module_id}/average_current",
+            "fault_count_normal": f"{module_id}/fault_count_normal",
+            "fault_over_current": f"{module_id}/fault_over_current",
+            "fault_over_discharge": f"{module_id}/fault_over_discharge",
+            "fault_overheating": f"{module_id}/fault_overheating"
+        }
+
         # ─── MODULE STATISTICS ─────────────────────────────────────
         stats = payload.get("statistics", {})
         fault_counts = stats.get("fault_counts", {})
@@ -50,7 +57,7 @@ def lambda_handler(event, context):
             if value is not None and key in MODULE_ALIAS_MAP:
                 value_type = "integerValue" if key in INTEGER_KEYS else "doubleValue"
                 entries.append({
-                    "entryId": f"module-{key}",
+                    "entryId": f"{module_id}-{key}",
                     "propertyAlias": MODULE_ALIAS_MAP[key],
                     "propertyValues": [{
                         "value": { value_type: int(value) if value_type == "integerValue" else float(value) },
@@ -70,7 +77,7 @@ def lambda_handler(event, context):
             value = fault_counts.get(fault_type)
             if value is not None and sitewise_key in MODULE_ALIAS_MAP:
                 entries.append({
-                    "entryId": f"module-{sitewise_key}",
+                    "entryId": f"{module_id}-{sitewise_key}",
                     "propertyAlias": MODULE_ALIAS_MAP[sitewise_key],
                     "propertyValues": [{
                         "value": { "integerValue": int(value) },
@@ -80,16 +87,16 @@ def lambda_handler(event, context):
                 })
 
         # ─── COMPROMISED CELLS ─────────────────────────────────────
-        for cell in payload.get("compromised_cells", []):
+        for cell in compromised_cells:
             raw_id = cell.get("id", "")
-            cell_parts = raw_id.split("-")
-            cell_suffix = cell_parts[-1] if len(cell_parts) == 4 else None
+            parts = raw_id.split("-")
+            cell_suffix = parts[-1] if len(parts) == 4 else None
 
             if not cell_suffix:
                 print(f"Skipping invalid cell ID: {raw_id}")
                 continue
 
-            asset_name = f"Cell-{cell_suffix.zfill(3)}"  # Ex: C004 → Cell-C004
+            asset_name = f"Cell-{cell_suffix.zfill(3)}"  # C004 → Cell-004
 
             for field in ["voltage", "curr", "temperature"]:
                 if field in cell:
