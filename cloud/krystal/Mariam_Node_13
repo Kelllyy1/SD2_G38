@@ -255,10 +255,11 @@ void ParseTask(void *pvParameters) {
     while (true) {
         // ulTaskNotifyTake(pdTRUE, portMAX_DELAY); 
 
-        Serial.print("Free memory ");
-        Serial.println(ESP.getFreeHeap());
+
 
         if (uxQueueMessagesWaiting(jsonQueue) > 0) {  // Check if JSON queue has messages
+                Serial.print("Free memory ");
+                Serial.println(ESP.getFreeHeap());
             char *Data;
             if (xQueueReceive(jsonQueue, &Data, portMAX_DELAY) == pdTRUE) {
                 int deviceID = DeviceID(Data);
