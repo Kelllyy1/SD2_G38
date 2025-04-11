@@ -249,9 +249,9 @@ void listenForDownNodeTask(void *pvParameters) {
 
     HardwareSerial *serialPort;
 
-    serialPort = &Serial2;
-    semaphore = &serial2Semaphore;
-    serial_number = "serial2";
+    serialPort = &Serial1;
+    semaphore = &serial1Semaphore;
+    serial_number = "serial1";
     while (true) {
 
     
@@ -303,11 +303,11 @@ void SendToRightNodeTask(void *pvParameters) {
     SemaphoreHandle_t semaphore;
 
 
-    semaphore = serial1Semaphore;
+    semaphore = serial2Semaphore;
 
-    HardwareSerial &serial = Serial1;
+    HardwareSerial &serial = Serial2;
 
-    String serial_name = "Serial1";
+    String serial_name = "Serial2";
     
 
     while (true) {
@@ -372,10 +372,10 @@ void RetrySendRightNodeTask(void *pvParameters) {
     SemaphoreHandle_t semaphore;
 
 
-    semaphore = serial1Semaphore;
+    semaphore = serial2Semaphore;
     
-    HardwareSerial &serial = Serial1;
-    String serial_name = "Serial1";
+    HardwareSerial &serial = Serial2;
+    String serial_name = "Serial2";
 
     while (true) {
         if (uxQueueMessagesWaiting(RETRY_QUEUE_NAME(NODE_RIGHT)) > 0) {  // Check if retry queue has messages
@@ -428,11 +428,11 @@ void SendToDownNodeTask(void *pvParameters) {
     SemaphoreHandle_t semaphore;
 
 
-    semaphore = serial2Semaphore;
+    semaphore = serial1Semaphore;
 
-    HardwareSerial &serial = Serial2;
+    HardwareSerial &serial = Serial1;
 
-    String serial_name = "Serial2";
+    String serial_name = "Serial1";
     
 
     while (true) {
@@ -482,10 +482,10 @@ void RetrySendDownNodeTask(void *pvParameters) {
     SemaphoreHandle_t semaphore;
 
 
-    semaphore = serial2Semaphore;
+    semaphore = serial1Semaphore;
     
-    HardwareSerial &serial = Serial2;
-    String serial_name = "Serial2";
+    HardwareSerial &serial = Serial1;
+    String serial_name = "Serial1";
 
     while (true) {
         if (uxQueueMessagesWaiting(RETRY_QUEUE_NAME(NODE_DOWN)) > 0) {  // Check if retry queue has messages
