@@ -175,6 +175,10 @@ void listenForLeftNodeTask(void *pvParameters) {
     if (ping) {
       
       tempData = WaitForData(*serialPort);
+        if (tempData == "no data"){
+        Serial.println("nodata");
+        continue;
+      }
 
       Serial.println("Received Data (should be JSON) = " + tempData);
 
