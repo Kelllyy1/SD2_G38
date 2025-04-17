@@ -2,6 +2,8 @@ import os
 import random
 import sys
 import math
+from pathlib import Path
+
 import serial.tools.list_ports
 from PySide6.QtGraphs import QAbstractSeries
 
@@ -68,17 +70,20 @@ class HermesHome(QWidget):
     # ---------------------------------- load resources  ----------------------------------#
     def load_resources(self):
         """Loads resources like icons and fonts."""
+        project_path = Path(__file__).resolve().parent
+        print("Project path:", project_path)
+
         app = QApplication.instance()
-        app.setWindowIcon(QIcon("C:/Users/Erica/Pictures/Senior Design/Hermes/Hermes/resources/images/Logo.ico"))
+        app.setWindowIcon(QIcon(str(project_path) + "resources/images/Logo.ico"))
         font_id = QFontDatabase.addApplicationFont(
-            "C:/Users/Erica/Pictures/Senior Design/Hermes/Hermes_Reloaded/resources/images/HermesIcons.ttf")
+            str(project_path) + "/resources/images/HermesIcons.ttf")
 
         if font_id == -1:
             print("Font failed to load.")
         else:
             print(f"Font loaded successfully with font ID: {font_id}")
         QFontDatabase.addApplicationFont(
-            "C:/Users/Erica/Pictures/Senior Design/Hermes/Hermes_Reloaded/resources/images/LEMONMILK-Medium.otf")
+            str(project_path) + "/resources/style_hermes.qss")
 
     def apply_stylesheet(self):
         """Applies the stylesheet to the application."""
