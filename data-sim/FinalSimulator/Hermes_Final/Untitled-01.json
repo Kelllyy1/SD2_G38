@@ -1,0 +1,1416 @@
+{
+    "blocks": [
+        [
+            [
+                {
+                    "rack_id": "R001",
+                    "module_id": "M001",
+                    "deviceID": 1,
+                    "timeInSeconds": 1744905892,
+                    "cells": [
+                        {
+                            "id": "B001-R001-M001-C001",
+                            "voltage": 2.673,
+                            "current": 3.785,
+                            "temperature": 25.586,
+                            "status": "Compromised",
+                            "faults": "Overcharge"
+                        },
+                        {
+                            "id": "B001-R001-M001-C002",
+                            "voltage": 2.7,
+                            "current": 3.349,
+                            "temperature": 25.689,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M001-C003",
+                            "voltage": 2.7,
+                            "current": 2.742,
+                            "temperature": 24.66,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M001-C004",
+                            "voltage": 2.336,
+                            "current": 4.331,
+                            "temperature": 26.114,
+                            "status": "Compromised",
+                            "faults": "Overdischarge"
+                        },
+                        {
+                            "id": "B001-R001-M001-C005",
+                            "voltage": 2.7,
+                            "current": 3.52,
+                            "temperature": 23.794,
+                            "status": "Compromised",
+                            "faults": "Overcurrent"
+                        },
+                        {
+                            "id": "B001-R001-M001-C006",
+                            "voltage": 2.7,
+                            "current": 3.399,
+                            "temperature": 25.975,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M001-C007",
+                            "voltage": 2.568,
+                            "current": 3.939,
+                            "temperature": 23.876,
+                            "status": "Compromised",
+                            "faults": "Overcharge"
+                        },
+                        {
+                            "id": "B001-R001-M001-C008",
+                            "voltage": 2.7,
+                            "current": 3.553,
+                            "temperature": 23.597,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M001-C009",
+                            "voltage": 2.183,
+                            "current": 4.633,
+                            "temperature": 26.518,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M001-C010",
+                            "voltage": 2.7,
+                            "current": 3.187,
+                            "temperature": 23.394,
+                            "status": "Compromised",
+                            "faults": "Overcurrent"
+                        }
+                    ]
+                },
+                {
+                    "rack_id": "R001",
+                    "module_id": "M002",
+                    "deviceID": 2,
+                    "timeInSeconds": 1744905892,
+                    "cells": [
+                        {
+                            "id": "B001-R001-M002-C001",
+                            "voltage": 2.7,
+                            "current": 3.496,
+                            "temperature": 26.163,
+                            "status": "Compromised",
+                            "faults": "Thermal_runaway"
+                        },
+                        {
+                            "id": "B001-R001-M002-C002",
+                            "voltage": 2.7,
+                            "current": 3.04,
+                            "temperature": 26.689,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M002-C003",
+                            "voltage": 2.7,
+                            "current": 3.699,
+                            "temperature": 23.92,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M002-C004",
+                            "voltage": 2.7,
+                            "current": 2.961,
+                            "temperature": 26.031,
+                            "status": "Compromised",
+                            "faults": "Overdischarge"
+                        },
+                        {
+                            "id": "B001-R001-M002-C005",
+                            "voltage": 2.306,
+                            "current": 4.387,
+                            "temperature": 24.875,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M002-C006",
+                            "voltage": 2.7,
+                            "current": 2.01,
+                            "temperature": 24.789,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M002-C007",
+                            "voltage": 2.261,
+                            "current": 4.473,
+                            "temperature": 26.977,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M002-C008",
+                            "voltage": 2.7,
+                            "current": 2.918,
+                            "temperature": 25.531,
+                            "status": "Compromised",
+                            "faults": "Overcurrent"
+                        },
+                        {
+                            "id": "B001-R001-M002-C009",
+                            "voltage": 2.579,
+                            "current": 3.922,
+                            "temperature": 23.367,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M002-C010",
+                            "voltage": 2.7,
+                            "current": 2.833,
+                            "temperature": 25.568,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        }
+                    ]
+                },
+                {
+                    "rack_id": "R001",
+                    "module_id": "M003",
+                    "deviceID": 3,
+                    "timeInSeconds": 1744905892,
+                    "cells": [
+                        {
+                            "id": "B001-R001-M003-C001",
+                            "voltage": 2.7,
+                            "current": 2.468,
+                            "temperature": 26.947,
+                            "status": "Compromised",
+                            "faults": "Overcurrent"
+                        },
+                        {
+                            "id": "B001-R001-M003-C002",
+                            "voltage": 2.7,
+                            "current": 2.14,
+                            "temperature": 24.206,
+                            "status": "Compromised",
+                            "faults": "Thermal_runaway"
+                        },
+                        {
+                            "id": "B001-R001-M003-C003",
+                            "voltage": 2.7,
+                            "current": 2.147,
+                            "temperature": 23.269,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M003-C004",
+                            "voltage": 2.228,
+                            "current": 4.54,
+                            "temperature": 26.276,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M003-C005",
+                            "voltage": 2.7,
+                            "current": 2.833,
+                            "temperature": 26.801,
+                            "status": "Compromised",
+                            "faults": "Overcharge"
+                        },
+                        {
+                            "id": "B001-R001-M003-C006",
+                            "voltage": 2.7,
+                            "current": 2.6,
+                            "temperature": 23.531,
+                            "status": "Compromised",
+                            "faults": "Overcharge"
+                        },
+                        {
+                            "id": "B001-R001-M003-C007",
+                            "voltage": 2.7,
+                            "current": 3.32,
+                            "temperature": 25.305,
+                            "status": "Compromised",
+                            "faults": "Overcharge"
+                        },
+                        {
+                            "id": "B001-R001-M003-C008",
+                            "voltage": 2.099,
+                            "current": 4.819,
+                            "temperature": 26.694,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M003-C009",
+                            "voltage": 2.7,
+                            "current": 3.137,
+                            "temperature": 26.928,
+                            "status": "Compromised",
+                            "faults": "Overcurrent"
+                        },
+                        {
+                            "id": "B001-R001-M003-C010",
+                            "voltage": 2.319,
+                            "current": 4.362,
+                            "temperature": 26.978,
+                            "status": "Compromised",
+                            "faults": "Overheating"
+                        }
+                    ]
+                },
+                {
+                    "rack_id": "R001",
+                    "module_id": "M004",
+                    "deviceID": 4,
+                    "timeInSeconds": 1744905892,
+                    "cells": [
+                        {
+                            "id": "B001-R001-M004-C001",
+                            "voltage": 2.7,
+                            "current": 3.438,
+                            "temperature": 23.616,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M004-C002",
+                            "voltage": 2.479,
+                            "current": 4.081,
+                            "temperature": 25.458,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M004-C003",
+                            "voltage": 2.398,
+                            "current": 4.219,
+                            "temperature": 25.942,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M004-C004",
+                            "voltage": 2.7,
+                            "current": 2.513,
+                            "temperature": 25.893,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M004-C005",
+                            "voltage": 2.687,
+                            "current": 3.764,
+                            "temperature": 23.619,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M004-C006",
+                            "voltage": 2.416,
+                            "current": 4.186,
+                            "temperature": 24.168,
+                            "status": "Compromised",
+                            "faults": "Thermal_runaway"
+                        },
+                        {
+                            "id": "B001-R001-M004-C007",
+                            "voltage": 2.7,
+                            "current": 3.612,
+                            "temperature": 25.715,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M004-C008",
+                            "voltage": 2.7,
+                            "current": 2.034,
+                            "temperature": 24.057,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M004-C009",
+                            "voltage": 2.302,
+                            "current": 4.395,
+                            "temperature": 25.378,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M004-C010",
+                            "voltage": 2.7,
+                            "current": 3.246,
+                            "temperature": 24.748,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        }
+                    ]
+                },
+                {
+                    "rack_id": "R001",
+                    "module_id": "M005",
+                    "deviceID": 5,
+                    "timeInSeconds": 1744905892,
+                    "cells": [
+                        {
+                            "id": "B001-R001-M005-C001",
+                            "voltage": 2.551,
+                            "current": 3.965,
+                            "temperature": 24.271,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M005-C002",
+                            "voltage": 2.087,
+                            "current": 4.847,
+                            "temperature": 23.634,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M005-C003",
+                            "voltage": 2.426,
+                            "current": 4.169,
+                            "temperature": 25.293,
+                            "status": "Compromised",
+                            "faults": "Overheating"
+                        },
+                        {
+                            "id": "B001-R001-M005-C004",
+                            "voltage": 2.474,
+                            "current": 4.088,
+                            "temperature": 23.106,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M005-C005",
+                            "voltage": 2.322,
+                            "current": 4.357,
+                            "temperature": 25.119,
+                            "status": "Compromised",
+                            "faults": "Overheating"
+                        },
+                        {
+                            "id": "B001-R001-M005-C006",
+                            "voltage": 2.7,
+                            "current": 2.01,
+                            "temperature": 23.296,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M005-C007",
+                            "voltage": 2.622,
+                            "current": 3.858,
+                            "temperature": 24.143,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M005-C008",
+                            "voltage": 2.7,
+                            "current": 2.847,
+                            "temperature": 23.31,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M005-C009",
+                            "voltage": 2.7,
+                            "current": 3.509,
+                            "temperature": 25.085,
+                            "status": "Compromised",
+                            "faults": "Overheating"
+                        },
+                        {
+                            "id": "B001-R001-M005-C010",
+                            "voltage": 2.144,
+                            "current": 4.717,
+                            "temperature": 25.85,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        }
+                    ]
+                },
+                {
+                    "rack_id": "R001",
+                    "module_id": "M006",
+                    "deviceID": 6,
+                    "timeInSeconds": 1744905892,
+                    "cells": [
+                        {
+                            "id": "B001-R001-M006-C001",
+                            "voltage": 2.7,
+                            "current": 2.468,
+                            "temperature": 25.693,
+                            "status": "Compromised",
+                            "faults": "Thermal_runaway"
+                        },
+                        {
+                            "id": "B001-R001-M006-C002",
+                            "voltage": 2.462,
+                            "current": 4.109,
+                            "temperature": 23.771,
+                            "status": "Compromised",
+                            "faults": "Overcurrent"
+                        },
+                        {
+                            "id": "B001-R001-M006-C003",
+                            "voltage": 2.7,
+                            "current": 2.97,
+                            "temperature": 26.748,
+                            "status": "Compromised",
+                            "faults": "Overheating"
+                        },
+                        {
+                            "id": "B001-R001-M006-C004",
+                            "voltage": 2.127,
+                            "current": 4.755,
+                            "temperature": 26.954,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M006-C005",
+                            "voltage": 2.143,
+                            "current": 4.72,
+                            "temperature": 23.373,
+                            "status": "Compromised",
+                            "faults": "Overdischarge"
+                        },
+                        {
+                            "id": "B001-R001-M006-C006",
+                            "voltage": 2.7,
+                            "current": 2.013,
+                            "temperature": 23.189,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M006-C007",
+                            "voltage": 2.7,
+                            "current": 3.456,
+                            "temperature": 25.528,
+                            "status": "Compromised",
+                            "faults": "Overcharge"
+                        },
+                        {
+                            "id": "B001-R001-M006-C008",
+                            "voltage": 2.7,
+                            "current": 2.693,
+                            "temperature": 23.997,
+                            "status": "Compromised",
+                            "faults": "Overdischarge"
+                        },
+                        {
+                            "id": "B001-R001-M006-C009",
+                            "voltage": 2.289,
+                            "current": 4.42,
+                            "temperature": 23.637,
+                            "status": "Compromised",
+                            "faults": "Thermal_runaway"
+                        },
+                        {
+                            "id": "B001-R001-M006-C010",
+                            "voltage": 2.7,
+                            "current": 3.74,
+                            "temperature": 24.704,
+                            "status": "Compromised",
+                            "faults": "Overheating"
+                        }
+                    ]
+                },
+                {
+                    "rack_id": "R001",
+                    "module_id": "M007",
+                    "deviceID": 7,
+                    "timeInSeconds": 1744905892,
+                    "cells": [
+                        {
+                            "id": "B001-R001-M007-C001",
+                            "voltage": 2.7,
+                            "current": 2.982,
+                            "temperature": 25.597,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M007-C002",
+                            "voltage": 2.7,
+                            "current": 3.262,
+                            "temperature": 26.931,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M007-C003",
+                            "voltage": 2.7,
+                            "current": 2.782,
+                            "temperature": 25.756,
+                            "status": "Compromised",
+                            "faults": "Thermal_runaway"
+                        },
+                        {
+                            "id": "B001-R001-M007-C004",
+                            "voltage": 2.425,
+                            "current": 4.171,
+                            "temperature": 25.69,
+                            "status": "Compromised",
+                            "faults": "Overcurrent"
+                        },
+                        {
+                            "id": "B001-R001-M007-C005",
+                            "voltage": 2.7,
+                            "current": 2.63,
+                            "temperature": 23.025,
+                            "status": "Compromised",
+                            "faults": "Overheating"
+                        },
+                        {
+                            "id": "B001-R001-M007-C006",
+                            "voltage": 2.302,
+                            "current": 4.395,
+                            "temperature": 25.052,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M007-C007",
+                            "voltage": 2.141,
+                            "current": 4.725,
+                            "temperature": 26.044,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M007-C008",
+                            "voltage": 2.7,
+                            "current": 2.557,
+                            "temperature": 23.373,
+                            "status": "Compromised",
+                            "faults": "Overcharge"
+                        },
+                        {
+                            "id": "B001-R001-M007-C009",
+                            "voltage": 2.292,
+                            "current": 4.413,
+                            "temperature": 25.892,
+                            "status": "Compromised",
+                            "faults": "Overheating"
+                        },
+                        {
+                            "id": "B001-R001-M007-C010",
+                            "voltage": 2.046,
+                            "current": 4.945,
+                            "temperature": 24.289,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        }
+                    ]
+                },
+                {
+                    "rack_id": "R001",
+                    "module_id": "M008",
+                    "deviceID": 8,
+                    "timeInSeconds": 1744905892,
+                    "cells": [
+                        {
+                            "id": "B001-R001-M008-C001",
+                            "voltage": 2.7,
+                            "current": 2.94,
+                            "temperature": 24.562,
+                            "status": "Compromised",
+                            "faults": "Overdischarge"
+                        },
+                        {
+                            "id": "B001-R001-M008-C002",
+                            "voltage": 2.7,
+                            "current": 2.868,
+                            "temperature": 24.511,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M008-C003",
+                            "voltage": 2.7,
+                            "current": 2.572,
+                            "temperature": 25.613,
+                            "status": "Compromised",
+                            "faults": "Thermal_runaway"
+                        },
+                        {
+                            "id": "B001-R001-M008-C004",
+                            "voltage": 2.033,
+                            "current": 4.976,
+                            "temperature": 25.144,
+                            "status": "Compromised",
+                            "faults": "Overheating"
+                        },
+                        {
+                            "id": "B001-R001-M008-C005",
+                            "voltage": 2.343,
+                            "current": 4.317,
+                            "temperature": 23.877,
+                            "status": "Compromised",
+                            "faults": "Thermal_runaway"
+                        },
+                        {
+                            "id": "B001-R001-M008-C006",
+                            "voltage": 2.698,
+                            "current": 3.749,
+                            "temperature": 24.451,
+                            "status": "Compromised",
+                            "faults": "Overheating"
+                        },
+                        {
+                            "id": "B001-R001-M008-C007",
+                            "voltage": 2.7,
+                            "current": 2.141,
+                            "temperature": 24.135,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M008-C008",
+                            "voltage": 2.7,
+                            "current": 3.599,
+                            "temperature": 23.762,
+                            "status": "Compromised",
+                            "faults": "Overcharge"
+                        },
+                        {
+                            "id": "B001-R001-M008-C009",
+                            "voltage": 2.7,
+                            "current": 2.789,
+                            "temperature": 26.191,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M008-C010",
+                            "voltage": 2.331,
+                            "current": 4.339,
+                            "temperature": 23.352,
+                            "status": "Compromised",
+                            "faults": "Thermal_runaway"
+                        }
+                    ]
+                },
+                {
+                    "rack_id": "R001",
+                    "module_id": "M009",
+                    "deviceID": 9,
+                    "timeInSeconds": 1744905892,
+                    "cells": [
+                        {
+                            "id": "B001-R001-M009-C001",
+                            "voltage": 2.7,
+                            "current": 2.34,
+                            "temperature": 24.609,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M009-C002",
+                            "voltage": 2.7,
+                            "current": 2.281,
+                            "temperature": 23.233,
+                            "status": "Compromised",
+                            "faults": "Overdischarge"
+                        },
+                        {
+                            "id": "B001-R001-M009-C003",
+                            "voltage": 2.7,
+                            "current": 2.692,
+                            "temperature": 26.066,
+                            "status": "Compromised",
+                            "faults": "Overdischarge"
+                        },
+                        {
+                            "id": "B001-R001-M009-C004",
+                            "voltage": 2.042,
+                            "current": 4.953,
+                            "temperature": 24.221,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M009-C005",
+                            "voltage": 2.7,
+                            "current": 3.281,
+                            "temperature": 26.081,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M009-C006",
+                            "voltage": 2.7,
+                            "current": 2.956,
+                            "temperature": 23.264,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M009-C007",
+                            "voltage": 2.7,
+                            "current": 2.683,
+                            "temperature": 25.146,
+                            "status": "Compromised",
+                            "faults": "Overheating"
+                        },
+                        {
+                            "id": "B001-R001-M009-C008",
+                            "voltage": 2.7,
+                            "current": 2.615,
+                            "temperature": 25.366,
+                            "status": "Compromised",
+                            "faults": "Overdischarge"
+                        },
+                        {
+                            "id": "B001-R001-M009-C009",
+                            "voltage": 2.263,
+                            "current": 4.469,
+                            "temperature": 25.882,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M009-C010",
+                            "voltage": 2.7,
+                            "current": 3.441,
+                            "temperature": 24.35,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        }
+                    ]
+                },
+                {
+                    "rack_id": "R001",
+                    "module_id": "M010",
+                    "deviceID": 10,
+                    "timeInSeconds": 1744905892,
+                    "cells": [
+                        {
+                            "id": "B001-R001-M010-C001",
+                            "voltage": 2.7,
+                            "current": 2.743,
+                            "temperature": 26.609,
+                            "status": "Compromised",
+                            "faults": "Overcurrent"
+                        },
+                        {
+                            "id": "B001-R001-M010-C002",
+                            "voltage": 2.7,
+                            "current": 2.206,
+                            "temperature": 25.731,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M010-C003",
+                            "voltage": 2.7,
+                            "current": 3.439,
+                            "temperature": 23.182,
+                            "status": "Compromised",
+                            "faults": "Overheating"
+                        },
+                        {
+                            "id": "B001-R001-M010-C004",
+                            "voltage": 2.405,
+                            "current": 4.206,
+                            "temperature": 26.981,
+                            "status": "Compromised",
+                            "faults": "Thermal_runaway"
+                        },
+                        {
+                            "id": "B001-R001-M010-C005",
+                            "voltage": 2.7,
+                            "current": 2.361,
+                            "temperature": 26.051,
+                            "status": "Compromised",
+                            "faults": "Thermal_runaway"
+                        },
+                        {
+                            "id": "B001-R001-M010-C006",
+                            "voltage": 2.057,
+                            "current": 4.918,
+                            "temperature": 24.714,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M010-C007",
+                            "voltage": 2.625,
+                            "current": 3.853,
+                            "temperature": 23.724,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M010-C008",
+                            "voltage": 2.658,
+                            "current": 3.806,
+                            "temperature": 24.396,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M010-C009",
+                            "voltage": 2.7,
+                            "current": 3.493,
+                            "temperature": 24.286,
+                            "status": "Compromised",
+                            "faults": "Thermal_runaway"
+                        },
+                        {
+                            "id": "B001-R001-M010-C010",
+                            "voltage": 2.126,
+                            "current": 4.759,
+                            "temperature": 26.957,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        }
+                    ]
+                },
+                {
+                    "rack_id": "R001",
+                    "module_id": "M011",
+                    "deviceID": 11,
+                    "timeInSeconds": 1744905892,
+                    "cells": [
+                        {
+                            "id": "B001-R001-M011-C001",
+                            "voltage": 2.7,
+                            "current": 3.292,
+                            "temperature": 23.815,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M011-C002",
+                            "voltage": 2.7,
+                            "current": 2.178,
+                            "temperature": 23.774,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M011-C003",
+                            "voltage": 2.7,
+                            "current": 2.942,
+                            "temperature": 23.718,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M011-C004",
+                            "voltage": 2.195,
+                            "current": 4.608,
+                            "temperature": 24.23,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M011-C005",
+                            "voltage": 2.7,
+                            "current": 3.602,
+                            "temperature": 26.781,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M011-C006",
+                            "voltage": 2.539,
+                            "current": 3.984,
+                            "temperature": 24.988,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M011-C007",
+                            "voltage": 2.596,
+                            "current": 3.896,
+                            "temperature": 25.79,
+                            "status": "Compromised",
+                            "faults": "Thermal_runaway"
+                        },
+                        {
+                            "id": "B001-R001-M011-C008",
+                            "voltage": 2.303,
+                            "current": 4.393,
+                            "temperature": 24.354,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M011-C009",
+                            "voltage": 2.7,
+                            "current": 3.553,
+                            "temperature": 23.817,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M011-C010",
+                            "voltage": 2.7,
+                            "current": 2.357,
+                            "temperature": 23.109,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        }
+                    ]
+                },
+                {
+                    "rack_id": "R001",
+                    "module_id": "M012",
+                    "deviceID": 12,
+                    "timeInSeconds": 1744905892,
+                    "cells": [
+                        {
+                            "id": "B001-R001-M012-C001",
+                            "voltage": 2.7,
+                            "current": 2.066,
+                            "temperature": 26.231,
+                            "status": "Compromised",
+                            "faults": "Overheating"
+                        },
+                        {
+                            "id": "B001-R001-M012-C002",
+                            "voltage": 2.219,
+                            "current": 4.558,
+                            "temperature": 26.155,
+                            "status": "Compromised",
+                            "faults": "Overcharge"
+                        },
+                        {
+                            "id": "B001-R001-M012-C003",
+                            "voltage": 2.047,
+                            "current": 4.942,
+                            "temperature": 24.328,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M012-C004",
+                            "voltage": 2.7,
+                            "current": 2.971,
+                            "temperature": 26.399,
+                            "status": "Compromised",
+                            "faults": "Overcurrent"
+                        },
+                        {
+                            "id": "B001-R001-M012-C005",
+                            "voltage": 2.7,
+                            "current": 2.008,
+                            "temperature": 25.126,
+                            "status": "Compromised",
+                            "faults": "Overdischarge"
+                        },
+                        {
+                            "id": "B001-R001-M012-C006",
+                            "voltage": 2.7,
+                            "current": 2.849,
+                            "temperature": 25.908,
+                            "status": "Compromised",
+                            "faults": "Overdischarge"
+                        },
+                        {
+                            "id": "B001-R001-M012-C007",
+                            "voltage": 2.7,
+                            "current": 2.778,
+                            "temperature": 26.049,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M012-C008",
+                            "voltage": 2.456,
+                            "current": 4.118,
+                            "temperature": 23.199,
+                            "status": "Compromised",
+                            "faults": "Overcurrent"
+                        },
+                        {
+                            "id": "B001-R001-M012-C009",
+                            "voltage": 2.7,
+                            "current": 3.174,
+                            "temperature": 25.321,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M012-C010",
+                            "voltage": 2.7,
+                            "current": 3.005,
+                            "temperature": 25.002,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        }
+                    ]
+                },
+                {
+                    "rack_id": "R001",
+                    "module_id": "M013",
+                    "deviceID": 13,
+                    "timeInSeconds": 1744905892,
+                    "cells": [
+                        {
+                            "id": "B001-R001-M013-C001",
+                            "voltage": 2.7,
+                            "current": 3.629,
+                            "temperature": 24.026,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M013-C002",
+                            "voltage": 2.7,
+                            "current": 3.11,
+                            "temperature": 23.285,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M013-C003",
+                            "voltage": 2.188,
+                            "current": 4.623,
+                            "temperature": 23.497,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M013-C004",
+                            "voltage": 2.7,
+                            "current": 3.032,
+                            "temperature": 24.555,
+                            "status": "Compromised",
+                            "faults": "Overdischarge"
+                        },
+                        {
+                            "id": "B001-R001-M013-C005",
+                            "voltage": 2.7,
+                            "current": 2.877,
+                            "temperature": 23.808,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M013-C006",
+                            "voltage": 2.7,
+                            "current": 2.92,
+                            "temperature": 23.7,
+                            "status": "Compromised",
+                            "faults": "Overdischarge"
+                        },
+                        {
+                            "id": "B001-R001-M013-C007",
+                            "voltage": 2.7,
+                            "current": 2.321,
+                            "temperature": 24.958,
+                            "status": "Compromised",
+                            "faults": "Overdischarge"
+                        },
+                        {
+                            "id": "B001-R001-M013-C008",
+                            "voltage": 2.7,
+                            "current": 2.479,
+                            "temperature": 25.678,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M013-C009",
+                            "voltage": 2.7,
+                            "current": 3.186,
+                            "temperature": 24.171,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M013-C010",
+                            "voltage": 2.576,
+                            "current": 3.927,
+                            "temperature": 25.208,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        }
+                    ]
+                },
+                {
+                    "rack_id": "R001",
+                    "module_id": "M014",
+                    "deviceID": 14,
+                    "timeInSeconds": 1744905892,
+                    "cells": [
+                        {
+                            "id": "B001-R001-M014-C001",
+                            "voltage": 2.7,
+                            "current": 2.823,
+                            "temperature": 25.59,
+                            "status": "Compromised",
+                            "faults": "Overheating"
+                        },
+                        {
+                            "id": "B001-R001-M014-C002",
+                            "voltage": 2.139,
+                            "current": 4.728,
+                            "temperature": 25.8,
+                            "status": "Compromised",
+                            "faults": "Thermal_runaway"
+                        },
+                        {
+                            "id": "B001-R001-M014-C003",
+                            "voltage": 2.7,
+                            "current": 3.489,
+                            "temperature": 26.855,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M014-C004",
+                            "voltage": 2.498,
+                            "current": 4.05,
+                            "temperature": 26.521,
+                            "status": "Compromised",
+                            "faults": "Thermal_runaway"
+                        },
+                        {
+                            "id": "B001-R001-M014-C005",
+                            "voltage": 2.7,
+                            "current": 2.961,
+                            "temperature": 26.852,
+                            "status": "Compromised",
+                            "faults": "Overheating"
+                        },
+                        {
+                            "id": "B001-R001-M014-C006",
+                            "voltage": 2.292,
+                            "current": 4.414,
+                            "temperature": 23.929,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M014-C007",
+                            "voltage": 2.7,
+                            "current": 3.297,
+                            "temperature": 25.898,
+                            "status": "Compromised",
+                            "faults": "Thermal_runaway"
+                        },
+                        {
+                            "id": "B001-R001-M014-C008",
+                            "voltage": 2.669,
+                            "current": 3.79,
+                            "temperature": 25.018,
+                            "status": "Compromised",
+                            "faults": "Overdischarge"
+                        },
+                        {
+                            "id": "B001-R001-M014-C009",
+                            "voltage": 2.7,
+                            "current": 3.624,
+                            "temperature": 24.897,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M014-C010",
+                            "voltage": 2.7,
+                            "current": 2.444,
+                            "temperature": 25.044,
+                            "status": "Compromised",
+                            "faults": "Thermal_runaway"
+                        }
+                    ]
+                },
+                {
+                    "rack_id": "R001",
+                    "module_id": "M015",
+                    "deviceID": 15,
+                    "timeInSeconds": 1744905892,
+                    "cells": [
+                        {
+                            "id": "B001-R001-M015-C001",
+                            "voltage": 2.7,
+                            "current": 2.936,
+                            "temperature": 24.919,
+                            "status": "Compromised",
+                            "faults": "Overheating"
+                        },
+                        {
+                            "id": "B001-R001-M015-C002",
+                            "voltage": 2.162,
+                            "current": 4.679,
+                            "temperature": 23.312,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M015-C003",
+                            "voltage": 2.316,
+                            "current": 4.368,
+                            "temperature": 23.656,
+                            "status": "Compromised",
+                            "faults": "Overheating"
+                        },
+                        {
+                            "id": "B001-R001-M015-C004",
+                            "voltage": 2.233,
+                            "current": 4.53,
+                            "temperature": 23.279,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M015-C005",
+                            "voltage": 2.7,
+                            "current": 2.433,
+                            "temperature": 24.305,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M015-C006",
+                            "voltage": 2.7,
+                            "current": 2.387,
+                            "temperature": 23.597,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M015-C007",
+                            "voltage": 2.7,
+                            "current": 2.726,
+                            "temperature": 26.363,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M015-C008",
+                            "voltage": 2.7,
+                            "current": 3.474,
+                            "temperature": 23.296,
+                            "status": "Compromised",
+                            "faults": "Overcharge"
+                        },
+                        {
+                            "id": "B001-R001-M015-C009",
+                            "voltage": 2.7,
+                            "current": 2.685,
+                            "temperature": 26.387,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M015-C010",
+                            "voltage": 2.7,
+                            "current": 2.51,
+                            "temperature": 24.472,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        }
+                    ]
+                },
+                {
+                    "rack_id": "R001",
+                    "module_id": "M016",
+                    "deviceID": 16,
+                    "timeInSeconds": 1744905892,
+                    "cells": [
+                        {
+                            "id": "B001-R001-M016-C001",
+                            "voltage": 2.049,
+                            "current": 4.937,
+                            "temperature": 23.14,
+                            "status": "Compromised",
+                            "faults": "Overcurrent"
+                        },
+                        {
+                            "id": "B001-R001-M016-C002",
+                            "voltage": 2.7,
+                            "current": 2.953,
+                            "temperature": 26.58,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M016-C003",
+                            "voltage": 2.7,
+                            "current": 3.326,
+                            "temperature": 23.315,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M016-C004",
+                            "voltage": 2.7,
+                            "current": 2.592,
+                            "temperature": 26.672,
+                            "status": "Compromised",
+                            "faults": "Overcharge"
+                        },
+                        {
+                            "id": "B001-R001-M016-C005",
+                            "voltage": 2.233,
+                            "current": 4.529,
+                            "temperature": 23.964,
+                            "status": "Compromised",
+                            "faults": "Overdischarge"
+                        },
+                        {
+                            "id": "B001-R001-M016-C006",
+                            "voltage": 2.578,
+                            "current": 3.923,
+                            "temperature": 23.041,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M016-C007",
+                            "voltage": 2.096,
+                            "current": 4.826,
+                            "temperature": 23.897,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M016-C008",
+                            "voltage": 2.7,
+                            "current": 2.685,
+                            "temperature": 25.52,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M016-C009",
+                            "voltage": 2.7,
+                            "current": 2.19,
+                            "temperature": 26.131,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        },
+                        {
+                            "id": "B001-R001-M016-C010",
+                            "voltage": 2.432,
+                            "current": 4.16,
+                            "temperature": 25.963,
+                            "status": "Normal",
+                            "faults": "Normal"
+                        }
+                    ]
+                }
+            ]
+        ]
+    ]
+}

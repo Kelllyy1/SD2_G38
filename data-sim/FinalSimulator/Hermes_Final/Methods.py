@@ -1,0 +1,344 @@
+import os
+import random
+import json
+import math
+import sys
+import time
+from datetime import datetime
+
+import serial
+from PySide6.QtCore import QThread, Signal
+from queue import Queue
+
+# Constants
+AIR_DENSITY = 1.225
+MAX_VOLTAGE = 2.7
+FAULT_PROBABILITY = 0.5
+C_RATE = random.uniform(1, 5)
+random.seed()
+
+
+class Cell:
+    """Represents a single cell in the hierarchy with attributes for simulation."""
+
+    def __init__(self, block, rack, module, cell_id):
+        self.id = f"B{(block.id):03}-{(rack.id):03}-{(module.id):03}-C{(cell_id):03}"
+        self.voltage = 0.0
+        self.current = 0.0
+        self.temperature = 25.0
+        self.status = "Normal"
+        self.faults = {
+            "overcharge": False,
+            "overdischarge": False,
+            "overheating": False,
+            "overcurrent": False,
+            "thermal_runaway": False
+        }
+
+    def update_status(self):
+        """Randomly assigns a fault with a small probability."""
+        if random.random() < FAULT_PROBABILITY:
+            fault_type = random.choice(list(self.faults.keys()))
+            self.faults[fault_type] = True
+            self.status = "Compromised"
+
+    def update_attributes(self, power, temperature_variance=0):
+        """Update cell's attributes based on power input."""
+
+        def update_voltage(self, power_per_cell):
+            self.voltage = min(MAX_VOLTAGE, power_per_cell / self.current)
+
+    def get_fault(self):
+        """Return the fault type as a string if any, otherwise 'Normal'."""
+        for fault, is_active in self.faults.items():
+            if is_active:
+                return fault.capitalize()  # Capitalize the fault name (e.g., 'Overcharge')
+        return "Normal"  # If no faults are active, return 'Normal'
+
+
+class Module:
+    """Represents a module, containing multiple cells."""
+
+    def __init__(self, block, rack, module_id, num_cells, deviceID):
+        self.id = module_id
+        self.rack_id = rack.id
+        self.deviceID = deviceID
+        now = datetime.now()
+        self.time = now.timestamp()
+        self.isProcessed = False  # Flag for processed state
+        self.cells = [Cell(block, rack, self, i + 1) for i in range(num_cells)]
+
+    def get_data(self):
+        """Get structured JSON data for this module."""
+        return {
+            "rack_id": self.rack_id,
+            "module_id": self.id,
+            "deviceID": self.deviceID,
+            "timeInSeconds": round(self.time),
+            "cells": [
+                {
+                    **cell.__dict__,
+                    "faults": cell.get_fault()  # Replace the faults with a string (e.g., 'Overcharge', 'Normal')
+                }
+                for cell in self.cells
+            ]
+        }
+
+
+class Rack:
+    """Represents a rack, containing multiple modules."""
+
+    def __init__(self, block, rack_id, num_modules, num_cells_per_module):
+        self.id = rack_id
+        self.deviceID = 0
+        self.modules = [Module(block, self, f"M{(i + 1):03}", num_cells_per_module, deviceID=(i + 1)) for i in
+                        range(num_modules)]
+
+    def get_module_data(self):
+        """Get data for all modules in this rack."""
+        return [module.get_data() for module in self.modules]
+
+
+class Block:
+    """Represents a block, containing multiple racks."""
+
+    def __init__(self, block_id, num_racks, num_modules_per_rack, num_cells_per_module):
+        self.id = block_id
+        self.racks = [Rack(self, f"R{(i + 1):03}", num_modules_per_rack, num_cells_per_module) for i in
+                      range(num_racks)]
+
+    def get_rack_data(self):
+        """Get data for all racks in this block."""
+        return [rack.get_module_data() for rack in self.racks]
+
+
+class Methods:
+    """Methods for managing simulations."""
+
+    def __init__(self, core, config):
+        self.core = core
+        self.config = config
+        self.blocks = []
+        self.wind_speed = 0.0
+        self.weather_data = []
+        self.com_port_queue = Queue()  # Queue to manage available COM ports
+        self.serial_workers = []  # Store worker references
+
+    def generate_cells(self):
+        """Generate the blocks, racks, modules, and cells."""
+        for b in range(1, self.config["blocks"] + 1):
+            block = Block(b, self.config["racks_per_block"], self.config["modules_per_rack"],
+                          self.config["cells_per_module"])
+            self.blocks.append(block)  # This appends Block, not Module
+
+    def simulate_weather(self):
+        """Simulate weather by generating wind speed."""
+        self.wind_speed = random.uniform(self.config["min_wind_speed"], self.config["max_wind_speed"])
+        self.weather_data.append(self.wind_speed)
+
+    def calculate_power_output(self):
+        """Calculate power output based on wind speed and energy coefficient."""
+        swept_area = math.pi * (self.config["blade_length"] / 2) ** 2
+        return 0.5 * AIR_DENSITY * swept_area * (self.wind_speed ** 3) * self.config["energy_coefficient"] * \
+            self.config["plant_size"]
+
+    def simulate_energy_distribution(self):
+        """Simulate energy distribution across cells."""
+        total_power = self.calculate_power_output()  # Calculate total power
+        total_cells = sum(len(module.cells) for block in self.blocks for rack in block.racks for module in rack.modules)
+
+        if total_cells == 0:
+            print("No cells available for power distribution.")
+            return
+
+        power_per_cell = total_power / total_cells  # Split power among all cells
+
+        for block in self.blocks:
+            for rack in block.racks:
+                for module in rack.modules:
+                    for cell in module.cells:
+                        # Randomized small current within a tight range
+                        cell.current = round(random.uniform(2, 5), 3)
+                        # Calculate voltage based on power and current
+                        cell.voltage = round(min(MAX_VOLTAGE, power_per_cell / cell.current), 3)
+                        # Apply some temperature variation
+                        cell.temperature = round(cell.temperature + random.uniform(-2, 2), 3)
+                        # Update fault status
+                        cell.update_status()
+
+    def store_data(self):
+        """Store simulation data in JSON files."""
+        data = {"blocks": [block.get_rack_data() for block in self.blocks]}
+        self.filename = self.config["filename"]
+        with open(self.filename + ".json", "w") as json_file:
+            json.dump(data, json_file, indent=4)
+
+    def send_data_to_esp32(self):
+        """Start the serial worker threads, assigning COM ports based on module number and handling disconnected ports."""
+        available_com_ports = [f"COM{port}" for port in self.core.com_ports]
+        num_available_ports = len(available_com_ports)
+        print(f"Attempting to use the following COM ports for assignment: {available_com_ports}")
+
+        if not available_com_ports:
+            print("No COM ports available to connect to.")
+            return
+
+        self.active_workers = []
+        modules_processed_count = 0
+        num_modules_total = sum(len(rack.modules) for b in self.blocks for rack in b.racks)
+        assigned_com_ports = {}  # Keep track of which module is assigned to which COM port
+        recently_finished_ports = set()  # Track ports where a worker recently finished
+        failed_ports = set()  # Track ports where a worker likely failed
+
+        try:
+            for block in self.blocks:
+                print(f"Processing Block {block.id}")
+                for rack in block.racks:
+                    print(f"Processing Rack {rack.id} in Block {block.id}")
+                    for module in rack.modules:
+                        assigned = False
+                        while not assigned:
+                            module_number = int(module.id.replace("M", "")) if module.id.startswith("M") else int(
+                                module.id)
+                            required_port_index = (module_number - 1) % num_available_ports
+                            required_com_port = available_com_ports[required_port_index]
+
+                            is_port_busy = False
+                            for worker in self.active_workers:
+                                if worker.isRunning() and worker.com_port == required_com_port:
+                                    is_port_busy = True
+                                    break
+
+                            if not is_port_busy and required_com_port not in recently_finished_ports and required_com_port not in failed_ports:
+                                print(f"Assigning Module {module.id} to {required_com_port} (based on module number)")
+                                worker = SerialWorker(required_com_port, block, rack, module)
+                                worker.finished.connect(
+                                    lambda: self.handle_worker_finished(worker, recently_finished_ports,
+                                                                        failed_ports))
+                                self.active_workers.append(worker)
+                                worker.start()
+                                assigned_com_ports[module.id] = required_com_port
+                                time.sleep(0.1)
+                                modules_processed_count += 1
+                                print(
+                                    f"Worker {len(self.active_workers)} started for Module {module.id} on {required_com_port}")
+                                time.sleep(0.1)
+                                assigned = True
+                            else:
+                                if required_com_port in failed_ports:
+                                    print(f"COM port {required_com_port} likely failed. Skipping for now...")
+                                elif required_com_port in recently_finished_ports:
+                                    print(f"COM port {required_com_port} recently finished. Waiting...")
+                                else:
+                                    print(f"COM port {required_com_port} is currently busy. Waiting...")
+                                time.sleep(1)  # Wait and check again
+
+            # Wait for all workers to finish
+            for worker in self.active_workers:
+                worker.wait()
+
+            print("Finished send_data_to_esp32. Total modules:", num_modules_total, ", Processed:",
+                  modules_processed_count)
+
+        except Exception as e:
+            print(f"An error occurred in send_data_to_esp32: {e}")
+
+    def handle_worker_finished(self, worker, recently_finished_ports, failed_ports):
+        """Handle worker finishing and track recently used/failed ports."""
+        print(f"Worker for {worker.module.id} on {worker.com_port} has finished.")
+        if worker in self.active_workers:
+            self.active_workers.remove(worker)
+            recently_finished_ports.add(worker.com_port)
+            # Check if the worker likely failed (e.g., no response or a specific error)
+            if not hasattr(worker, 'full_response') or not worker.full_response:
+                failed_ports.add(worker.com_port)
+                print(f"COM port {worker.com_port} likely had an issue (no response).")
+
+            # Optionally, remove from recently_finished_ports after a short delay
+            if hasattr(self, 'startTimer'):  # Check if QObject
+                self.startTimer(2000, lambda port=worker.com_port: recently_finished_ports.discard(port))
+            else:
+                import threading
+                threading.Timer(2, lambda port=worker.com_port: recently_finished_ports.discard(port)).start()
+
+    def run_simulation(self):
+        """Run the full simulation process."""
+        self.generate_cells()
+        self.simulate_weather()
+        self.simulate_energy_distribution()
+        self.store_data()
+        self.send_data_to_esp32()
+        print("Simulation complete.")
+        self.core.receive_data_from_methods("Simulation complete with data")  # or you can pass actual data
+
+
+def get_fault_probability():
+    """Get the current fault probability"""
+    return FAULT_PROBABILITY
+
+
+def set_fault_probability(value):
+    """Set the fault probability to a new value"""
+    global FAULT_PROBABILITY
+    FAULT_PROBABILITY = value
+
+
+class SerialWorker(QThread):
+    response_received = Signal(str)
+    finished = Signal()
+
+    def __init__(self, com_port, block, rack, module):
+        super().__init__()
+        self.com_port = com_port
+        self.block = block
+        self.rack = rack
+        self.module = module
+        self.running = True
+
+    def run(self):
+        ser = None
+        try:
+            ser = serial.Serial(self.com_port, 115200, timeout=15, dsrdtr=False, rtscts=False)
+            time.sleep(2)
+            module_data = self.module.get_data()
+            json_string = json.dumps(module_data)
+            print(f"Sending JSON to Node on {self.com_port}: {json_string}")
+            start = time.time()
+            ser.write((json_string + "\n").encode())
+            json_size = len((json_string + "\n").encode())  # Size in bytes
+            print("The size of the JSON sent is: " + str((json_size / 1000)) + "kB")
+            ser.flush()
+            end = time.time()
+            print("Total transmission time = ", end-start)
+            time.sleep(2)
+
+            full_response = ""
+            start_time = time.time()
+            while self.running and (time.time() - start_time < 10):
+                response = ser.read(ser.in_waiting).decode()
+                if response:
+                    print(f"Received from ESP32 on {self.com_port}: {response}")
+                    full_response += response
+                    start_time = time.time()
+                time.sleep(0.1)
+                try:
+                    parsed_data = json.loads(full_response)
+                    print(f"Full JSON received on {self.com_port}: {parsed_data}")
+                    full_response = ""
+                except json.JSONDecodeError:
+                    pass
+
+        except serial.SerialException as e:
+            print(f"Serial error on {self.com_port}: {e}")
+        except json.JSONDecodeError as e:
+            print(f"JSON decode error on {self.com_port}: {e} - Received: '{full_response}'")
+        except Exception as e:
+            print(f"General error in SerialWorker for COM port {self.com_port}: {e}")
+        finally:
+            if ser and ser.is_open:
+                print(f"Closing COM port {self.com_port}")
+                ser.close()
+                print(f"COM port {self.com_port} closed.")
+            elif ser:
+                print(f"COM port {self.com_port} was not open.")
+            self.finished.emit()
