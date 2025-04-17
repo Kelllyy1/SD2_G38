@@ -25,6 +25,8 @@ from matplotlib.figure import Figure
 from Core import Core, MplCanvas
 from Methods import Methods
 
+project_path = Path(__file__).resolve().parent
+print("Project path:", project_path)
 
 def show_error_popup(message):
     # Create a message box to show the error
@@ -70,9 +72,8 @@ class HermesHome(QWidget):
     # ---------------------------------- load resources  ----------------------------------#
     def load_resources(self):
         """Loads resources like icons and fonts."""
-        project_path = Path(__file__).resolve().parent
-        print("Project path:", project_path)
 
+        print("Project path:", project_path)
         app = QApplication.instance()
         app.setWindowIcon(QIcon(str(project_path) + "resources/images/Logo.ico"))
         font_id = QFontDatabase.addApplicationFont(
@@ -652,7 +653,7 @@ class HermesHome(QWidget):
             if math.isqrt(module) ** 2 != module:
                 raise ValueError("Module must be a perfect square.")
 
-            filepath = "C://Users//Erica//Pictures//Senior Design//Hermes//Hermes_Reloaded//" + filename + ".json"
+            filepath = str(project_path) + filename + ".json"
             print(filepath)
             # C:\Users\Erica\Pictures\Senior Design\Hermes\Hermes_Reloaded\Untitled-01.json
             # if os.path.exists(filepath):
@@ -713,7 +714,7 @@ class HermesHome(QWidget):
     def apply_stylesheet(self):
         """Applies the application stylesheet."""
         app = QApplication.instance()
-        stylesheet = load_stylesheet(self, "resources/style_hermes.qss")
+        stylesheet = load_stylesheet(self, str(project_path) + "resources/style_hermes.qss")
         app.setStyleSheet(stylesheet)
 
 
@@ -755,11 +756,11 @@ class HermesConfig(QWidget):
     def load_resources(self):
         """Loads resources like icons and fonts."""
         app = QApplication.instance()
-        app.setWindowIcon(QIcon("C:/Users/Erica/Pictures/Senior Design/Hermes/Hermes/resources/images/Logo.ico"))
+        app.setWindowIcon(QIcon(str(project_path) + "resources/images/Logo.ico"))
         QFontDatabase.addApplicationFont(
-            "C:/Users/Erica/Pictures/Senior Design/Hermes/Hermes/resources/images/Font_005.ttf")
+            str(project_path) + "/resources/images/Font_005.ttf")
         QFontDatabase.addApplicationFont(
-            "C:/Users/Erica/Pictures/Senior Design/Hermes/Hermes/resources/images/LEMONMILK-Medium.otf")
+            str(project_path) + "resources/images/LEMONMILK-Medium.otf")
 
     def apply_stylesheet(self):
         """Applies the stylesheet to the application."""
@@ -1267,7 +1268,7 @@ class HermesConfig(QWidget):
     def apply_stylesheet(self):
         """Applies the application stylesheet."""
         app = QApplication.instance()
-        stylesheet = load_stylesheet(self, "resources/style_hermes.qss")
+        stylesheet = load_stylesheet(self, str(project_path) + "resources/style_hermes.qss")
         app.setStyleSheet(stylesheet)
 
     def echo(self, data):
@@ -1662,7 +1663,9 @@ class MainWindow(QMainWindow):
 
 def load_stylesheet(self, file_path):
     """Loads a stylesheet from a file."""
+    print("The file path is " + str(file_path))
     file = QFile(file_path)
+    print("The file is " + str(file))
     if not file.open(QFile.ReadOnly):
         raise Exception(f"Cannot open file: {file_path}")
     stream = QTextStream(file)
