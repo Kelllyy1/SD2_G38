@@ -714,7 +714,7 @@ class HermesHome(QWidget):
     def apply_stylesheet(self):
         """Applies the application stylesheet."""
         app = QApplication.instance()
-        stylesheet = load_stylesheet(self, str(project_path) + "resources/style_hermes.qss")
+        stylesheet = load_stylesheet(self, "resources/style_hermes.qss")
         app.setStyleSheet(stylesheet)
 
 
@@ -1268,7 +1268,7 @@ class HermesConfig(QWidget):
     def apply_stylesheet(self):
         """Applies the application stylesheet."""
         app = QApplication.instance()
-        stylesheet = load_stylesheet(self, str(project_path) + "resources/style_hermes.qss")
+        stylesheet = load_stylesheet(self, "resources/style_hermes.qss")
         app.setStyleSheet(stylesheet)
 
     def echo(self, data):
