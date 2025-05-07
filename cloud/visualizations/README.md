@@ -1,4 +1,6 @@
 # Visualizations
+The [example JSON file](visualizations/../example03.json) shows how the data looked as output from the ESP32 exit node of our system -> into the entrance of the cloud in AWS IoT Core. This data was processed in realtime using AWS lambda functions and IoT SiteWise and sent to Grafana for visualization. Multiple packets of data were sent simultaneously and the updates from the system were seen in real-time in Grafana.
+
 ![iot-core-mqtt-broker](https://github.com/user-attachments/assets/74363904-9064-404b-ac26-e72fddaddc29)
 
 As part of our project, we used the AWS IoT Core MQTT Test Client to test and verify message delivery between our IoT devices and the cloud. This tool allowed us to publish and subscribe to different MQTT topics in order to simulate and monitor communication. In our case, we created multiple topics, such as “esp/Module/bulk1” through “esp/Module/bulk4”, to represent the different modules in the system. The Figure shows the MQTT client interface. Once published, any messages sent to the subscribed topics from the exit node of the eDAQ appear immediately in the interface, confirming that the data was being received correctly.
