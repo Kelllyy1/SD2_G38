@@ -71,14 +71,14 @@ def create_and_link_cells(count, module_name):
         cell_ids.append(aid)
         cell_names.append(name)
 
-    print("⏳ Waiting for all cells to become ACTIVE...")
+    print(" Waiting for all cells to become ACTIVE...")
     for aid, name in zip(cell_ids, cell_names):
         wait_for_asset_active(aid)
-        print(f"🟢 {name} is ACTIVE")
+        print(f" {name} is ACTIVE")
 
     for aid, name in zip(cell_ids, cell_names):
         client.associate_assets(assetId=module_id, hierarchyId=hierarchy_id, childAssetId=aid)
-        print(f"✅ Linked {name} to Module {module_name}")
+        print(f" Linked {name} to Module {module_name}")
 
     with open("cell_ids.txt", "w") as f:
         for aid in cell_ids:
@@ -171,7 +171,7 @@ if __name__ == "__main__":
 #         print(f"🛠 Created Cell asset: {name} | ID: {aid}")
 #         wait_for_asset_active(aid)
 #         client.associate_assets(assetId=module_id, hierarchyId=hierarchy_id, childAssetId=aid)
-#         print(f"✅ Linked {name} to Module {module_name}")
+#         print(f" Linked {name} to Module {module_name}")
 #         cell_ids.append(aid)
 
 #     with open("cell_ids.txt", "w") as f:

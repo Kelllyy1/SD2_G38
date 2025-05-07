@@ -59,7 +59,7 @@ def set_property_aliases(asset_id, asset_name):
         prop_type = list(prop['type'].keys())[0] if 'type' in prop and prop['type'] else None
 
         if prop_type != 'measurement':
-            print(f"⚠️ Skipped '{prop_name}' — not a measurement.")
+            print(f" Skipped '{prop_name}' — not a measurement.")
             continue
 
         alias = f"{asset_name}/{prop_name}"
@@ -68,7 +68,7 @@ def set_property_aliases(asset_id, asset_name):
             propertyId=prop_id,
             propertyAlias=alias
         )
-        print(f"🔗 Set alias: {alias}")
+        print(f" Set alias: {alias}")
 
 def create_and_link_cells(count, module_name):
     cell_model_id = get_cell_model_id()
@@ -86,19 +86,19 @@ def create_and_link_cells(count, module_name):
             assetModelId=cell_model_id
         )
         aid = response['assetId']
-        print(f"🛠 Created Cell asset: {name} | ID: {aid}")
+        print(f" Created Cell asset: {name} | ID: {aid}")
         cell_ids.append(aid)
         cell_names.append(name)
 
-    print("⏳ Waiting for all cells to become ACTIVE...")
+    print(" Waiting for all cells to become ACTIVE...")
     for aid, name in zip(cell_ids, cell_names):
         wait_for_asset_active(aid)
-        print(f"🟢 {name} is ACTIVE")
+        print(f" {name} is ACTIVE")
 
     for aid, name in zip(cell_ids, cell_names):
         set_property_aliases(aid, name)
         client.associate_assets(assetId=module_id, hierarchyId=hierarchy_id, childAssetId=aid)
-        print(f"✅ Linked {name} to Module {module_name}")
+        print(f" Linked {name} to Module {module_name}")
 
     with open("cell_ids.txt", "w") as f:
         for aid in cell_ids:

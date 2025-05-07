@@ -19,7 +19,7 @@ def wait_for_asset_active(asset_id, timeout=60):
     for _ in range(timeout):
         status = client.describe_asset(assetId=asset_id)['assetStatus']['state']
         if status == "ACTIVE":
-            print("✅ Module asset is ACTIVE.")
+            print(" Module asset is ACTIVE.")
             return
         time.sleep(1)
     raise TimeoutError(f"Asset {asset_id} did not become ACTIVE in {timeout} seconds.")
@@ -30,7 +30,7 @@ def create_module_asset(module_model_id, module_name):
         assetModelId=module_model_id
     )
     module_asset_id = response['assetId']
-    print(f"✅ Created Module asset: {module_name} | ID: {module_asset_id}")
+    print(f" Created Module asset: {module_name} | ID: {module_asset_id}")
     wait_for_asset_active(module_asset_id)
     return module_asset_id
 

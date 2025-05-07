@@ -58,7 +58,7 @@ def create_and_link_cells(count, module_name):
         aid = response['assetId']
         wait_for_asset_active(aid)
         client.associate_assets(assetId=module_id, hierarchyId=hierarchy_id, childAssetId=aid)
-        print(f"✅ Created & linked: {name} | ID: {aid}")
+        print(f" Created & linked: {name} | ID: {aid}")
         cell_ids.append(aid)
 
     with open("cell_ids.txt", "w") as f:
